@@ -1,0 +1,49 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/brigadecore/brigade/v2/v2/apiserver/schemas/project.json
+apiVersion: brigade.sh/v2-alpha.5
+kind: Project
+metadata:
+  id: github-demo
+description: A project that demonstrates integration with GitHub
+spec:
+  eventSubscriptions:
+  - labels:
+      repo: brigadecore/test-repo
+    source: brigade.sh/github
+    types:
+    - watch:started
+    - check_suite:requested
+    - check_suite:rerequested
+  workerTemplate:
+    defaultConfigFiles:
+      brigade.js: |-
+        const { events, Job } = require("@brigadecore/brigadier");
+
+        async function runPipeline(event) {
+          let fooJob = new Job("foo", "debian:latest", event);
+          fooJob.primaryContainer.command = ["echo"];
+          fooJob.primaryContainer.arguments = ["foo"];
+          await fooJob.run();
+
+          let barJob = new Job("bar", "debian:latest", event);
+          barJob.primaryContainer.command = ["echo"];
+          barJob.primaryContainer.arguments = ["bar"];
+          await barJob.run();
+        }
+
+        events.on("brigade.sh/github", "watch:started", () => {
+          console.log("----> received watch:started event");
+        });
+
+        events.on("brigade.sh/github", "check_suite:requested", async event => {
+          console.log("----> received check_suite:requested event");
+          await runPipeline(event);
+        });
+
+        events.on("brigade.sh/github", "check_suite:rerequested", async event => {
+          console.log("----> received check_suite:rerequested event");
+          await runPipeline(event);
+        });
+
+        events.process();
+    logLevel: DEBUG
+    useWorkspace: false

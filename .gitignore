@@ -1,0 +1,10 @@
+.gocache/
+coverage.txt
+charts/brigade-github-gateway/charts
+.DS_Store
+
+# IDEs
+.vscode/
+.devcontainer/
+.idea/
+.swp

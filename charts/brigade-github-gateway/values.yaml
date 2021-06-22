@@ -1,0 +1,230 @@
+## Default values for brigade-github-gateway
+## This is a YAML-formatted file.
+## Declare variables to be passed into your templates.
+
+brigade:
+  ## Address of your Brigade 2 API server, including leading protocol (http://
+  ## or https://)
+  apiAddress: https://brigade-apiserver.brigade.svc.cluster.local
+  ## API token belonging to a Brigade 2 service account
+  apiToken: 0da4dab0b1f64c28aaebd652601ff5a3uBbDGVkqDPz8c9evn86AHvIwRUk9b5TAMllKrbLxsLwmcGgXwD87VEpcMm44rXHX1o6IZKk29GNxBsESAYHQKoOAy8qY28D85vGsMx5MeosVNFthFpYzIeOugiuXsK7vM9lD4xIdTfBRQMGTQjVQ1BcDF4vUFluV5OrBaOwFlLNiCoP9U4bq7EPIWRYppIG7t2D2QKzZ7n6S73PnCH7dE8xp2aaeBmaV
+  ## Whether to ignore cert warning from the API server
+  apiIgnoreCertWarnings: true
+
+## You must create a GitHub App (https://github.com/settings/apps/new)
+## corresponding to this Brigade GitHub Gateway.
+github:
+  ## This is the unique ID of your GitHub App. It is assigned by GitHub and can
+  ## be retrieved from your GitHub App's main page after you have created it.
+  appID: 99005
+  ## A PEM-formatted x509 key for your GitHub App. This value should begin with
+  ## "-----BEGIN RSA PRIVATE KEY-----" and end with
+  ## "-----END RSA PRIVATE KEY-----"
+  apiKey: |
+    -----BEGIN RSA PRIVATE KEY-----
+    MIIEowIBAAKCAQEAwHdLQMUtbDnIMzOqJXtoE94XebEWQDeoDsmhkgX2Uk2DRw6x
+    xvjjhJcvKZ1Ndldv4xFo7Ys0waUSPPxatNOLXfKxX4YtZGYIAjN5b5kCmbfdu9BD
+    nFuFEVj7dv/VhqjzoJWdblwxrtIQbN65i51DxtE3C5BITfbt6mc03jkitfqlsN2z
+    oqMdqDGHmU95uUuSE+0NDc14J76+fDTnqh7t/bsj2xQ3W9EI2VTG6DVKczOCj0ZZ
+    qQ5nJado+QuNbrsbLUlA4p+enHVCfL6ZBrCL9kSuCVOSIi0LyvrZ07cFD/DkYD35
+    O6837xwVNQvAjUThgs0A966D4toeNUxFBPCttQIDAQABAoIBAHD7lqmHFosZwHSO
+    N6uZLhe7oHxHgJBiG73Sj45xAZB/ADmOXr43DRigx4beWMLHwV7CsZ4Awg+LH5G9
+    cmIEbSPRfF5fHfZ6Dul73iWs5OHoFbpTH92BvDPa0IOi224ZcCssqSZH6MJ/fjTq
+    6nES+N6VooKfSFK8Sh34SAjL8ZxxalgIU+UY3e48dRcyndAditTKxKRUHSZyxOqe
+    g35mznYLAljZ+DkGHscLtpOnLLY0Y2bK2FIac1Fbqv+3KtcPSZyS74+yMQxQgxaK
+    1qvEa1iXHBIhXJkklXRgkgdWxB/nP55grnPqI/Zm+3X5q0xW81/rKUcM+27S/GFG
+    x4n4XGECgYEA5mqGetKqc4a3qcdBwIS4IQGITE4mvhfidUP6BbZvDMWsET32PU0l
+    yN1I3n7EDdj8Rv6VuRNAHaex4QCsqkUugAJOzMqMxzszqUc936qDpP7zCGfiwkDO
+    K/OuUV/EzEJf+v3KaDwJ57DWR58vQ5EuvPxsf+B/ITubyoXCgsgvN5sCgYEA1dYN
+    rif85zIRqpXm1GO38LXWIXreWJMHRrwsTyeFa5gHdS0xBvke0jxjpwubSe2gF47k
+    RQs4c65NSMJuQTzb3cph6XTZE/g3VBCgNCA2wZ216G4xod6zeMZHAeER0c4TcYS7
+    WKWfuYkZcnhIVLM/gcwtBP0PG/yxnABumq4JjO8CgYAiH+CuzAhmd6s3v8TjKETE
+    zp9K/cALIypsx5Z9xhkIQTZMj2qqhYR1DSC/ovKSQnKKaSXvdQRn3/AeLKVlyj0q
+    xCy7c7wJvaDXDzAAshYxF3kS45/XuRVPuRU2BAL3ZVUlrPSPH2UwJSZ3EQJE9XmA
+    j7nZ7nulhlh6U/kMuW0UxQKBgEBGRfhqNp97skm3IxoGGzz0Ozf3CaxQDWjamOr1
+    8ymjGeLDwa/Z48THuCB24ad4EJ3kKoMCW2aSJtLO9nsPgvsIoSOeJr3U5zSShsUE
+    RdEuyYXi0XJZUVLlLmTHNSb+LWP6xKFhr0ACkK6SrxMeieFG8OVF92uvKee9TYGa
+    /G3rAoGBAL9VuGD0S6IweaaTkh7suZYmUivBzrNuDC7WgWnqmrO9S2EQlLQYJCH+
+    JDLmOP1GidET/AYTI9n67gD1hSH8QaxvuU4/IeUbEW/XtgOtjFlx5rSEuF+YI24w
+    qemhYQ0O8JtSGg2YIHsYMMHgnaUXmYQOnVy5nh2lscq6g0WirwRy
+    -----END RSA PRIVATE KEY-----
+
+## All settings for the receiver
+receiver:
+
+  replicas: 1
+
+  ## Host should be set accurately for a variety of reasons. This is used in
+  ## ingress resources and cert generation.
+  host: localhost:31700
+
+  image:
+    repository: brigadecore/brigade-github-gateway-receiver
+    ## tag should only be specified if you want to override Chart.appVersion
+    ## The default tag is the value of .Chart.AppVersion
+    tag: edge
+    pullPolicy: Always
+
+  github:
+    ## This value should be the same as was specified when creating your GitHub
+    ## App that corresponds to this gateway. GitHub will use this secret in
+    ## signing webhook payloads and the gateway can use this value to validate
+    ## those signatures. This allows the gateway to obtain assurances that a
+    ## webhook did indeed originate from GitHub and hasn't been tampered with
+    ## in-transit.
+    sharedSecret: foobar
+    checkSuite:
+      ## The author associations who are allowed to have their PR events and
+      ## "/brig run" comments trigger the creation of a GitHub CheckSuite.
+      ##
+      ## Possible values are: COLLABORATOR, CONTRIBUTOR, OWNER, NONE, MEMBER,
+      ## FIRST_TIMER, and FIRST_TME_CONTRIBUTOR.
+      ##
+      ## See https://developer.github.com/v4/enum/commentauthorassociation/
+      allowedAuthorAssociations:
+      - OWNER
+      - MEMBER
+      - COLLABORATOR
+      ## Whether a new GitHub CheckSuite should be created when an authorized
+      ## user (see above) opens or amends a PR.
+      onPR: true
+      ## Whether a new GitHub CheckSuite should be created when an authorized
+      ## user (see above) comments "/brig run" on a PR.
+      onComment: true
+
+  brigade:
+    ## The opt-in list of upstream event types that may be emitted into Brigade.
+    ## Defaults to "*" which matches any event type. To emit only specific
+    ## events into Brigade, remove "*" and enumerate specific event types
+    ## instead (`pull_request:opened`, for instance).
+    emittedEvents:
+    - "*"
+
+  tls:
+    ## Whether to enable TLS. If true then you MUST do ONE of three things to
+    ## ensure the existence of a TLS certificate:
+    ##
+    ## 1. Set generateSelfSignedCert below to true (the default)
+    ## 2. OR Set values for BOTH the cert and key fields below
+    ## 3. OR create a cert secret named <Helm release name>-receiver-cert in
+    ##    the same namespace as Brigade. This secret could be created manually
+    ##    or through other means, such as a cert manager.
+    enabled: true
+    ## Whether to generate a self-signed certificate. If true, a new certificate
+    ## will be generated for every revision of the corresponding Helm release.
+    ## Since the certificate is self-signed, it will not be trusted by clients
+    ## and should absolutely not be used for production, but having this enabled
+    ## as a default effectively discourages the more heavy-handed option to
+    ## disable TLS entirely. If TLS is enabled and cert generation is DISABLED,
+    ## users MUST provide their own cert and private key below OR create a cert
+    ## secret named <Helm release name>-receiver-cert in the same namespace as
+    ## the gateway.
+    generateSelfSignedCert: true
+    # cert: base 64 encoded cert goes here
+    # key: base 64 encoded key goes here
+
+  ingress:
+    ## Whether to enable ingress. By default, this is disabled and the
+    ## webhook receiver's service is of type LoadBalancer instead. Enabling
+    ## ingress is advanced usage.
+    enabled: false
+    ## Optionally use annotations specified by your ingress controller's
+    ## documentation to customize the behavior of the ingress resource.
+    annotations:
+      # kubernetes.io/ingress.class: nginx
+    tls:
+      ## Whether to enable TLS. If true then you MUST do ONE of three things to
+      ## ensure the existence of a TLS certificate:
+      ##
+      ## 1. Set generateSelfSignedCert below to true (the default)
+      ## 2. OR Set values for BOTH the cert and key fields below
+      ## 3. OR create a cert secret named
+      ##    <Helm release name>-receiver-ingress-cert in the same namespace as
+      ##    the gateway. This secret could be created manually or through other
+      ##    means, such as a cert manager.
+      ##
+      ## Note there is a wide disparity in the feature set of various ingress
+      ## controllers and some ingress controllers may be able to provision a
+      ## certificate for you even with TLS disabled here. Consult your ingress
+      ## controller's documentation.
+      enabled: true
+      ## Whether to generate a self-signed certificate. If true, a new
+      ## certificate will be generated for every revision of the corresponding
+      ## Helm release. Since the certificate is self-signed, it will not be
+      ## trusted by clients and should absolutely not be used for production,
+      ## but having this enabled as a default effectively discourages the more
+      ## heavy-handed option to disable TLS entirely. If ingress TLS is enabled
+      ## and cert generation is DISABLED, users MUST provide their own cert and
+      ## private key below OR create a cert secret named
+      ## <Helm release name>-receiver-ingres-cert in the same namespace as the
+      ## gateway.
+      generateSelfSignedCert: true
+      # cert: base 64 encoded cert goes here
+      # key: base 64 encoded key goes here
+
+  resources: {}
+    # We usually recommend not to specify default resources and to leave this as
+    # a conscious choice for the user. This also increases chances charts run on
+    # environments with little resources, such as Minikube. If you do want to
+    # specify resources, uncomment the following lines, adjust them as
+    # necessary, and remove the curly braces after 'resources:'.
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  service:
+    ## If you're going to use an ingress controller, you can change the service
+    ## type to CLusterIP.
+    type: LoadBalancer
+    # nodePort: 31700
+
+## All settings for the monitor
+monitor:
+
+  image:
+    repository: brigadecore/brigade-github-gateway-monitor
+    ## tag should only be specified if you want to override Chart.appVersion
+    ## The default tag is the value of .Chart.AppVersion
+    tag: edge
+    pullPolicy: Always
+
+  ## The interval at which this gateway's monitor component should scan Brigade
+  ## to learn about events it should be tracking for the purpose of reporting
+  ## job statuses upstream to GitHub.
+  ##
+  ## The value should be a sequence of decimal numbers, with optional fractional
+  ## component, and a unit suffix, such as "300ms", "3.14s" or "2h45m". Valid
+  ## time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+  listEventsInterval: 30s
+  ## The interval at which this gateway's monitor component should check for
+  ## status changes in events it is tracking for the purpose of reporting job
+  ## statuses upstream to GitHub.
+  ##
+  ## The value should be a sequence of decimal numbers, with optional fractional
+  ## component, and a unit suffix, such as "300ms", "3.14s" or "2h45m". Valid
+  ## time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+  eventFollowUpInterval: 30s
+
+  resources: {}
+    # We usually recommend not to specify default resources and to leave this as
+    # a conscious choice for the user. This also increases chances charts run on
+    # environments with little resources, such as Minikube. If you do want to
+    # specify resources, uncomment the following lines, adjust them as
+    # necessary, and remove the curly braces after 'resources:'.
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+  nodeSelector: {}
+
+  tolerations: []
