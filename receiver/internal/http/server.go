@@ -21,7 +21,7 @@ type ServerConfig struct {
 	// TLSCertPath is the path to a PEM-encoded x509 certificate that can be used
 	// for serving HTTPS.
 	TLSCertPath string
-	// TLSCertPath is the path to a PEM-encoded x509 private key that can be used
+	// TLSKeyPath is the path to a PEM-encoded x509 private key that can be used
 	// for serving HTTPS.
 	TLSKeyPath string
 }
