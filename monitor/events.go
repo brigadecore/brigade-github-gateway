@@ -415,8 +415,10 @@ func (m *monitor) getJobLogs(
 	}
 	// Arbitrarily limiting to 1000 log lines because we don't want to blow
 	// out the heap if a Job has produced an enormous amount of logs
+	const maxLines = 1000
+	var i int
 logLoop:
-	for i := 0; i < 1000; i++ {
+	for i = 0; i < maxLines; i++ {
 		var logEntry core.LogEntry
 		var ok bool
 		select {
@@ -436,6 +438,16 @@ logLoop:
 			}
 		case <-ctx.Done():
 			return "", ctx.Err()
+		}
+	}
+	if i > maxLines {
+		if _, err = jobLogsBuilder.WriteString(
+			fmt.Sprintf(
+				"--- !!! THESE LOGS HAVE BEEN TRUNCATED AFTER %d LINES !!! ---\n",
+				maxLines,
+			),
+		); err != nil {
+			return "", err
 		}
 	}
 	return jobLogsBuilder.String(), nil
