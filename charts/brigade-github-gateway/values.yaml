@@ -7,7 +7,7 @@ brigade:
   ## or https://)
   apiAddress: https://brigade-apiserver.brigade.svc.cluster.local
   ## API token belonging to a Brigade 2 service account
-  apiToken: 0da4dab0b1f64c28aaebd652601ff5a3uBbDGVkqDPz8c9evn86AHvIwRUk9b5TAMllKrbLxsLwmcGgXwD87VEpcMm44rXHX1o6IZKk29GNxBsESAYHQKoOAy8qY28D85vGsMx5MeosVNFthFpYzIeOugiuXsK7vM9lD4xIdTfBRQMGTQjVQ1BcDF4vUFluV5OrBaOwFlLNiCoP9U4bq7EPIWRYppIG7t2D2QKzZ7n6S73PnCH7dE8xp2aaeBmaV
+  apiToken:
   ## Whether to ignore cert warning from the API server
   apiIgnoreCertWarnings: true
 
