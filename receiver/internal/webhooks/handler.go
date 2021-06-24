@@ -5,8 +5,6 @@ import (
 	"log"
 	"net/http"
 
-	// nolint: lll
-
 	"github.com/google/go-github/v33/github"
 )
 
