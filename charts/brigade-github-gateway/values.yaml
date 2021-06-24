@@ -16,38 +16,12 @@ brigade:
 github:
   ## This is the unique ID of your GitHub App. It is assigned by GitHub and can
   ## be retrieved from your GitHub App's main page after you have created it.
-  appID: 99005
+  appID: 
   ## A PEM-formatted x509 key for your GitHub App. This value should begin with
   ## "-----BEGIN RSA PRIVATE KEY-----" and end with
   ## "-----END RSA PRIVATE KEY-----"
   apiKey: |
-    -----BEGIN RSA PRIVATE KEY-----
-    MIIEowIBAAKCAQEAwHdLQMUtbDnIMzOqJXtoE94XebEWQDeoDsmhkgX2Uk2DRw6x
-    xvjjhJcvKZ1Ndldv4xFo7Ys0waUSPPxatNOLXfKxX4YtZGYIAjN5b5kCmbfdu9BD
-    nFuFEVj7dv/VhqjzoJWdblwxrtIQbN65i51DxtE3C5BITfbt6mc03jkitfqlsN2z
-    oqMdqDGHmU95uUuSE+0NDc14J76+fDTnqh7t/bsj2xQ3W9EI2VTG6DVKczOCj0ZZ
-    qQ5nJado+QuNbrsbLUlA4p+enHVCfL6ZBrCL9kSuCVOSIi0LyvrZ07cFD/DkYD35
-    O6837xwVNQvAjUThgs0A966D4toeNUxFBPCttQIDAQABAoIBAHD7lqmHFosZwHSO
-    N6uZLhe7oHxHgJBiG73Sj45xAZB/ADmOXr43DRigx4beWMLHwV7CsZ4Awg+LH5G9
-    cmIEbSPRfF5fHfZ6Dul73iWs5OHoFbpTH92BvDPa0IOi224ZcCssqSZH6MJ/fjTq
-    6nES+N6VooKfSFK8Sh34SAjL8ZxxalgIU+UY3e48dRcyndAditTKxKRUHSZyxOqe
-    g35mznYLAljZ+DkGHscLtpOnLLY0Y2bK2FIac1Fbqv+3KtcPSZyS74+yMQxQgxaK
-    1qvEa1iXHBIhXJkklXRgkgdWxB/nP55grnPqI/Zm+3X5q0xW81/rKUcM+27S/GFG
-    x4n4XGECgYEA5mqGetKqc4a3qcdBwIS4IQGITE4mvhfidUP6BbZvDMWsET32PU0l
-    yN1I3n7EDdj8Rv6VuRNAHaex4QCsqkUugAJOzMqMxzszqUc936qDpP7zCGfiwkDO
-    K/OuUV/EzEJf+v3KaDwJ57DWR58vQ5EuvPxsf+B/ITubyoXCgsgvN5sCgYEA1dYN
-    rif85zIRqpXm1GO38LXWIXreWJMHRrwsTyeFa5gHdS0xBvke0jxjpwubSe2gF47k
-    RQs4c65NSMJuQTzb3cph6XTZE/g3VBCgNCA2wZ216G4xod6zeMZHAeER0c4TcYS7
-    WKWfuYkZcnhIVLM/gcwtBP0PG/yxnABumq4JjO8CgYAiH+CuzAhmd6s3v8TjKETE
-    zp9K/cALIypsx5Z9xhkIQTZMj2qqhYR1DSC/ovKSQnKKaSXvdQRn3/AeLKVlyj0q
-    xCy7c7wJvaDXDzAAshYxF3kS45/XuRVPuRU2BAL3ZVUlrPSPH2UwJSZ3EQJE9XmA
-    j7nZ7nulhlh6U/kMuW0UxQKBgEBGRfhqNp97skm3IxoGGzz0Ozf3CaxQDWjamOr1
-    8ymjGeLDwa/Z48THuCB24ad4EJ3kKoMCW2aSJtLO9nsPgvsIoSOeJr3U5zSShsUE
-    RdEuyYXi0XJZUVLlLmTHNSb+LWP6xKFhr0ACkK6SrxMeieFG8OVF92uvKee9TYGa
-    /G3rAoGBAL9VuGD0S6IweaaTkh7suZYmUivBzrNuDC7WgWnqmrO9S2EQlLQYJCH+
-    JDLmOP1GidET/AYTI9n67gD1hSH8QaxvuU4/IeUbEW/XtgOtjFlx5rSEuF+YI24w
-    qemhYQ0O8JtSGg2YIHsYMMHgnaUXmYQOnVy5nh2lscq6g0WirwRy
-    -----END RSA PRIVATE KEY-----
+    REQUIRED: Your key goes here.
 
 ## All settings for the receiver
 receiver:
@@ -72,7 +46,7 @@ receiver:
     ## those signatures. This allows the gateway to obtain assurances that a
     ## webhook did indeed originate from GitHub and hasn't been tampered with
     ## in-transit.
-    sharedSecret: foobar
+    sharedSecret:
     checkSuite:
       ## The author associations who are allowed to have their PR events and
       ## "/brig check" or "/brig run" comments trigger the creation of a GitHub
