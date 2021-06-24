@@ -118,10 +118,10 @@ _It is your only opportunity to access this value, as Brigade does not save it._
 Authorize this service account to read all events and to create new ones:
 
 ```console
-$ bin/brig-darwin-amd64 role grant READER \
+$ brig role grant READER \
     --service-account brigade-github-gateway
 
-$ bin/brig-darwin-amd64 role grant EVENT_CREATOR \
+$ brig role grant EVENT_CREATOR \
     --service-account brigade-github-gateway \
     --source brigade.sh/github
 ```
