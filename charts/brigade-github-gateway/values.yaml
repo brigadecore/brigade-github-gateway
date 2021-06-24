@@ -7,6 +7,13 @@ brigade:
   ## or https://)
   apiAddress: https://brigade-apiserver.brigade.svc.cluster.local
   ## API token belonging to a Brigade 2 service account
+  ##
+  ## For reference, these are the commands for creating a service account for
+  ## this gateway, with proper permissions:
+  ##
+  ## $ brig service-account create --id brigade-github-gateway --description brigade-github-gateway
+  ## $ brig role grant READER --service-account brigade-github-gateway
+  ## $ brig role grant EVENT_CREATOR --service-account brigade-github-gateway --source brigade.sh/github
   apiToken:
   ## Whether to ignore cert warning from the API server
   apiIgnoreCertWarnings: true
