@@ -75,7 +75,8 @@ receiver:
     sharedSecret: foobar
     checkSuite:
       ## The author associations who are allowed to have their PR events and
-      ## "/brig run" comments trigger the creation of a GitHub CheckSuite.
+      ## "/brig check" or "/brig run" comments trigger the creation of a GitHub
+      ## CheckSuite.
       ##
       ## Possible values are: COLLABORATOR, CONTRIBUTOR, OWNER, NONE, MEMBER,
       ## FIRST_TIMER, and FIRST_TME_CONTRIBUTOR.
@@ -89,7 +90,7 @@ receiver:
       ## user (see above) opens or amends a PR.
       onPR: true
       ## Whether a new GitHub CheckSuite should be created when an authorized
-      ## user (see above) comments "/brig run" on a PR.
+      ## user (see above) comments "/brig check" or "/brig run" on a PR.
       onComment: true
 
   brigade:

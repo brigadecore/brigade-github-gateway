@@ -28,9 +28,10 @@ type ServiceConfig struct {
 	// GithubAppID field.
 	GithubAPIKey []byte
 	// CheckSuiteAllowedAuthorAssociations enumerates the author associations who
-	// are allowed to have their PR events and "/brig run" comments trigger the
-	// creation of a GitHub CheckSuite. Possible values are: COLLABORATOR,
-	// CONTRIBUTOR, OWNER, NONE, MEMBER, FIRST_TIMER, and FIRST_TME_CONTRIBUTOR.
+	// are allowed to have their PR events and "/brig check" or "/brig run"
+	// comments trigger the creation of a GitHub CheckSuite. Possible values are:
+	// COLLABORATOR, CONTRIBUTOR, OWNER, NONE, MEMBER, FIRST_TIMER, and
+	// FIRST_TME_CONTRIBUTOR.
 	CheckSuiteAllowedAuthorAssociations []string
 	// CheckSuiteOnPR specifies whether eligible PR events (see
 	// CheckSuiteAllowedAuthorAssociations) should trigger a corresponding suite
@@ -42,9 +43,9 @@ type ServiceConfig struct {
 	// (only) to have their PRs trigger check suites automatically.
 	CheckSuiteOnPR bool
 	// CheckSuiteOnComment specifies whether eligible comments (ones containing
-	// the text "/brig run") should trigger a corresponding suite of checks. Note
-	// that this privilege is extended only to trusted classes of user specified
-	// by the CheckSuiteAllowedAuthorAssociations field.
+	// the text "/brig check" or "/brig run") should trigger a corresponding suite
+	// of checks. Note that this privilege is extended only to trusted classes of
+	// user specified by the CheckSuiteAllowedAuthorAssociations field.
 	CheckSuiteOnComment bool
 	// EmittedEvents enumerates specific event types that, when received by the
 	// gateway, should be emitted into Brigade's event bus. The value "*" can be
@@ -342,14 +343,12 @@ func (s *service) Handle(
 		// run in response to this comment.
 		//
 		// 1. The issue in question is a PR
-		// 2. The comment contains "/brig check" (case insensitive)
+		// 2. The comment contains "/brig check" or "/brig run" (case insensitive)
 		// 3. Requesting a check suite in response to a comment is enabled
 		// 4. The comment's author is allowed to request a check suite
+		comment := strings.ToLower(e.GetComment().GetBody())
 		if e.GetIssue().IsPullRequest() &&
-			strings.Contains(
-				strings.ToLower(e.GetComment().GetBody()),
-				"/brig check",
-			) &&
+			(strings.Contains(comment, "/brig check") || strings.Contains(comment, "/brig run")) && // nolint: lll
 			s.config.CheckSuiteOnComment &&
 			s.isAllowedAuthorAssociation(e.GetComment().GetAuthorAssociation()) {
 			var pr *github.PullRequest
