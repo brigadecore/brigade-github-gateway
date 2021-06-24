@@ -28,9 +28,14 @@ receiver:
 
   replicas: 1
 
-  ## Host should be set accurately for a variety of reasons. This is used in
-  ## ingress resources and cert generation.
-  host: localhost:31700
+  ## Host should be set to the public IP address or DNS hostname for this
+  ## gateway. Whenever possible, it should be set accurately for a variety of
+  ## reasons. If applicable, the value is used both in automatic certificate
+  ## generation and, also if applicable, the creation of ingress routing rules
+  ## (advanced). Keeping the default value or otherwise setting this
+  ## inaccurately may result in invalid routing rules or untrusted certificates
+  ## (untrusted beyond merely having been self-signed).
+  host: github.example.com
 
   image:
     repository: brigadecore/brigade-github-gateway-receiver
