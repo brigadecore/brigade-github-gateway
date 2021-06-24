@@ -125,22 +125,16 @@ func (s *service) Handle(
 			Commit: e.GetCheckRun().GetCheckSuite().GetHeadSHA(),
 			Ref:    e.GetCheckRun().GetCheckSuite().GetHeadBranch(),
 		}
-		brigadeEvent.SourceState = &core.SourceState{
-			State: map[string]string{
-				"tracking":       "true",
-				"installationID": strconv.FormatInt(e.GetInstallation().GetID(), 10),
-				"owner":          e.GetRepo().GetOwner().GetLogin(),
-				"repo":           e.GetRepo().GetName(),
-				"headSHA":        e.GetCheckRun().GetCheckSuite().GetHeadSHA(),
-			},
-		}
 		if e.GetAction() == "rerequested" {
-			if s.shouldEmit(brigadeEvent.Type) {
-				if events, err = s.eventsClient.Create(ctx, brigadeEvent); err != nil {
-					return events, errors.Wrap(err, "error emitting event(s) into Brigade")
-				}
+			brigadeEvent.SourceState = &core.SourceState{
+				State: map[string]string{
+					"tracking":       "true",
+					"installationID": strconv.FormatInt(e.GetInstallation().GetID(), 10),
+					"owner":          e.GetRepo().GetOwner().GetLogin(),
+					"repo":           e.GetRepo().GetName(),
+					"headSHA":        e.GetCheckRun().GetCheckSuite().GetHeadSHA(),
+				},
 			}
-			return events, nil // We're done
 		}
 
 	// nolint: lll
@@ -158,23 +152,16 @@ func (s *service) Handle(
 			Commit: e.GetCheckSuite().GetHeadSHA(),
 			Ref:    e.GetCheckSuite().GetHeadBranch(),
 		}
-		brigadeEvent.SourceState = &core.SourceState{
-			State: map[string]string{
-				"tracking":       "true",
-				"installationID": strconv.FormatInt(e.GetInstallation().GetID(), 10),
-				"owner":          e.GetRepo().GetOwner().GetLogin(),
-				"repo":           e.GetRepo().GetName(),
-				"headSHA":        e.GetCheckSuite().GetHeadSHA(),
-			},
-		}
-		switch e.GetAction() {
-		case "requested", "rerequested":
-			if s.shouldEmit(brigadeEvent.Type) {
-				if events, err = s.eventsClient.Create(ctx, brigadeEvent); err != nil {
-					return events, errors.Wrap(err, "error emitting event(s) into Brigade")
-				}
+		if e.GetAction() == "requested" || e.GetAction() == "rerequested" {
+			brigadeEvent.SourceState = &core.SourceState{
+				State: map[string]string{
+					"tracking":       "true",
+					"installationID": strconv.FormatInt(e.GetInstallation().GetID(), 10),
+					"owner":          e.GetRepo().GetOwner().GetLogin(),
+					"repo":           e.GetRepo().GetName(),
+					"headSHA":        e.GetCheckSuite().GetHeadSHA(),
+				},
 			}
-			return events, nil // We're done
 		}
 
 	// nolint: lll

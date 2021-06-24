@@ -107,56 +107,7 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "check_run event; action is not rerequested",
-			eventType: "check_run",
-			eventBytes: func() []byte {
-				bytes, err := json.Marshal(
-					&github.CheckRunEvent{
-						Action: testGenericAction,
-						Repo:   testRepo,
-						CheckRun: &github.CheckRun{
-							CheckSuite: &github.CheckSuite{
-								HeadSHA:    github.String(testSHA),
-								HeadBranch: github.String(testBranch),
-							},
-						},
-					},
-				)
-				require.NoError(t, err)
-				return bytes
-			},
-			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
-					CreateFn: func(
-						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
-								event,
-							},
-						}, nil
-					},
-				},
-			},
-			assertions: func(events core.EventList, err error) {
-				require.NoError(t, err)
-				require.Len(t, events.Items, 1)
-				event := events.Items[0]
-				require.Equal(t, "check_run:foo", event.Type)
-				require.Equal(
-					t,
-					core.GitDetails{
-						Commit: testSHA,
-						Ref:    testBranch,
-					},
-					*event.Git,
-				)
-			},
-		},
-
-		{
-			name:      "check_run event; action is rerequested",
+			name:      "check_run event",
 			eventType: "check_run",
 			eventBytes: func() []byte {
 				bytes, err := json.Marshal(
@@ -205,87 +156,7 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "check_run event; action is rerequested; create fails",
-			eventType: "check_run",
-			eventBytes: func() []byte {
-				bytes, err := json.Marshal(
-					&github.CheckRunEvent{
-						Action: github.String("rerequested"),
-						Repo:   testRepo,
-						CheckRun: &github.CheckRun{
-							CheckSuite: &github.CheckSuite{
-								HeadSHA:    github.String(testSHA),
-								HeadBranch: github.String(testBranch),
-							},
-						},
-					},
-				)
-				require.NoError(t, err)
-				return bytes
-			},
-			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
-					CreateFn: func(context.Context, core.Event) (core.EventList, error) {
-						return core.EventList{}, errors.New("something went wrong")
-					},
-				},
-			},
-			assertions: func(events core.EventList, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error emitting event(s) into Brigade")
-			},
-		},
-
-		{
-			name:      "check_suite event; action is not requested or rerequested",
-			eventType: "check_suite",
-			eventBytes: func() []byte {
-				bytes, err := json.Marshal(
-					&github.CheckSuiteEvent{
-						Action: testGenericAction,
-						Repo:   testRepo,
-						CheckSuite: &github.CheckSuite{
-							HeadSHA:    github.String(testSHA),
-							HeadBranch: github.String(testBranch),
-						},
-					},
-				)
-				require.NoError(t, err)
-				return bytes
-			},
-			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
-					CreateFn: func(
-						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
-								event,
-							},
-						}, nil
-					},
-				},
-			},
-			assertions: func(events core.EventList, err error) {
-				require.NoError(t, err)
-				require.Len(t, events.Items, 1)
-				event := events.Items[0]
-				require.Equal(t, "check_suite:foo", event.Type)
-				require.Equal(
-					t,
-					core.GitDetails{
-						Commit: testSHA,
-						Ref:    testBranch,
-					},
-					*event.Git,
-				)
-			},
-		},
-
-		{
-			name:      "check_suite event; action is requested",
+			name:      "check_suite event",
 			eventType: "check_suite",
 			eventBytes: func() []byte {
 				bytes, err := json.Marshal(
@@ -328,37 +199,6 @@ func TestHandle(t *testing.T) {
 					},
 					*event.Git,
 				)
-			},
-		},
-
-		{
-			name:      "check_suite event; action is requested; create fails",
-			eventType: "check_suite",
-			eventBytes: func() []byte {
-				bytes, err := json.Marshal(
-					&github.CheckSuiteEvent{
-						Action: github.String("requested"),
-						Repo:   testRepo,
-						CheckSuite: &github.CheckSuite{
-							HeadSHA:    github.String(testSHA),
-							HeadBranch: github.String(testBranch),
-						},
-					},
-				)
-				require.NoError(t, err)
-				return bytes
-			},
-			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
-					CreateFn: func(context.Context, core.Event) (core.EventList, error) {
-						return core.EventList{}, errors.New("something went wrong")
-					},
-				},
-			},
-			assertions: func(events core.EventList, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error emitting event(s) into Brigade")
 			},
 		},
 
