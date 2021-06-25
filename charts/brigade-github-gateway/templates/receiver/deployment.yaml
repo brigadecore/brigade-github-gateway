@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gateway.receiver.fullname" . }}
+  labels:
+    {{- include "gateway.labels" . | nindent 4 }}
+    {{- include "gateway.receiver.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.receiver.replicas }}
+  selector:
+    matchLabels:
+      {{- include "gateway.selectorLabels" . | nindent 6 }}
+      {{- include "gateway.receiver.labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "gateway.selectorLabels" . | nindent 8 }}
+        {{- include "gateway.receiver.labels" . | nindent 8 }}
+      annotations:
+        checksum/receiver-secret: {{ include (print $.Template.BasePath "/receiver/secret.yaml") . | sha256sum }}
+        {{- if .Values.receiver.tls.enabled }}
+        checksum/cert-secret: {{ include (print $.Template.BasePath "/receiver/cert-secret.yaml") . | sha256sum }}
+        {{- end }}
+    spec:
+      serviceAccount: {{ include "gateway.receiver.fullname" . }}
+      containers:
+      - name: receiver
+        image: {{ .Values.receiver.image.repository }}:{{ default .Chart.AppVersion .Values.receiver.image.tag }}
+        imagePullPolicy: {{ .Values.receiver.image.pullPolicy }}
+        env:
+        - name: TLS_ENABLED
+          value: {{ quote .Values.receiver.tls.enabled }}
+        {{- if .Values.receiver.tls.enabled }}
+        - name: TLS_CERT_PATH
+          value: /app/certs/tls.crt
+        - name: TLS_KEY_PATH
+          value: /app/certs/tls.key
+        {{- end }}
+        - name: GITHUB_APP_ID
+          value: {{ quote .Values.github.appID }}
+        - name: GITHUB_APP_SHARED_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "gateway.receiver.fullname" . }}
+              key: githubAppSharedSecret
+        - name: CHECK_SUITE_ON_PR
+          value: {{ quote .Values.receiver.github.checkSuite.onPR }}
+        - name: CHECK_SUITE_ON_COMMENT
+          value: {{ quote .Values.receiver.github.checkSuite.onComment }}
+        - name: API_ADDRESS
+          value: {{ .Values.brigade.apiAddress }}
+        - name: API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "gateway.receiver.fullname" . }}
+              key: brigadeAPIToken
+        - name: API_IGNORE_CERT_WARNINGS
+          value: {{ quote .Values.brigade.apiIgnoreCertWarnings }}
+        {{ if .Values.receiver.github.checkSuite.allowedAuthorAssociations }}
+        - name: CHECK_SUITE_ALLOWED_AUTHOR_ASSOCIATIONS
+          value: {{ join "," .Values.receiver.github.checkSuite.allowedAuthorAssociations | quote }}
+        {{ end }}
+        {{ if .Values.receiver.brigade.emittedEvents }}
+        - name: EMITTED_EVENTS
+          value: {{ join "," .Values.receiver.brigade.emittedEvents | quote }}
+        {{ end }}
+        volumeMounts:
+        {{- if .Values.receiver.tls.enabled }}
+        - name: cert
+          mountPath: /app/certs
+          readOnly: true
+        {{- end }}
+        - name: github-api-key
+          mountPath: /app/github-api-key
+          readOnly: true
+        livenessProbe:
+          httpGet:
+            port: 8080
+            path: /healthz
+            {{- if .Values.receiver.tls.enabled }}
+            scheme: HTTPS
+            {{- end }}
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            port: 8080
+            path: /healthz
+            {{- if .Values.receiver.tls.enabled }}
+            scheme: HTTPS
+            {{- end }}
+          initialDelaySeconds: 10
+          periodSeconds: 10
+      volumes:
+      {{- if .Values.receiver.tls.enabled }}
+      - name: cert
+        secret:
+          secretName: {{ include "gateway.receiver.fullname" . }}-cert
+      {{- end }}
+      - name: github-api-key
+        secret:
+          secretName: {{ include "gateway.fullname" . }}-github-api-key
+      {{- with .Values.receiver.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.receiver.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gateway.monitor.fullname" . }}
+  labels:
+    {{- include "gateway.labels" . | nindent 4 }}
+    {{- include "gateway.monitor.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "gateway.selectorLabels" . | nindent 6 }}
+      {{- include "gateway.monitor.labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "gateway.selectorLabels" . | nindent 8 }}
+        {{- include "gateway.monitor.labels" . | nindent 8 }}
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/monitor/secret.yaml") . | sha256sum }}
+    spec:
+      serviceAccount: {{ include "gateway.monitor.fullname" . }}
+      containers:
+      - name: monitor
+        image: {{ .Values.monitor.image.repository }}:{{ default .Chart.AppVersion .Values.monitor.image.tag }}
+        imagePullPolicy: {{ .Values.monitor.image.pullPolicy }}
+        env:
+        - name: API_ADDRESS
+          value: {{ .Values.brigade.apiAddress }}
+        - name: API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "gateway.monitor.fullname" . }}
+              key: brigadeAPIToken
+        - name: API_IGNORE_CERT_WARNINGS
+          value: {{ quote .Values.brigade.apiIgnoreCertWarnings }}
+        - name: GITHUB_APP_ID
+          value: {{ quote .Values.github.appID }}
+        - name: LIST_EVENTS_INTERVAL
+          value: {{ .Values.monitor.listEventsInterval }}
+        - name: EVENT_FOLLOW_UP_INTERVAL
+          value: {{ .Values.monitor.eventFollowUpInterval }}
+        volumeMounts:
+        - name: github-api-key
+          mountPath: /app/github-api-key
+          readOnly: true
+      volumes:
+      - name: github-api-key
+        secret:
+          secretName: {{ include "gateway.fullname" . }}-github-api-key
+      {{- with .Values.monitor.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.monitor.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
