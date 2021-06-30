@@ -2,6 +2,8 @@
 coverage.txt
 charts/brigade-github-gateway/charts
 .DS_Store
+.brigade/node_modules/
+.brigade/secrets.yaml
 
 # IDEs
 .vscode/
