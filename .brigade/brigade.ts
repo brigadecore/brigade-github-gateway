@@ -151,6 +151,10 @@ events.on("brigade.sh/github", "push", async event => {
         pushReceiverJob(event),
         pushMonitorJob(event)
       ),
+      // Chart publishing is deliberately run only after all image pushes above
+      // have succeeded. We don't want any possibility of publishing a chart
+      // that references images that failed to push (or simply haven't
+      // finished pushing).
       publishChartJob(event)
     ).run()
   } else {
