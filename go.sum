@@ -1,3 +1,5 @@
+github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2 h1:7Ip0wMmLHLRJdrloDxZfhMm0xrLXZS8+COSu2bXmEQs=
+github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=
 github.com/brigadecore/brigade/sdk/v2 v2.0.0-alpha.5.0.20210614205223-c89ad0ef0260 h1:BuuzEs84uw06myuo4G2j+fLiXMjwS/pXFDNp9i6e1Ds=
 github.com/brigadecore/brigade/sdk/v2 v2.0.0-alpha.5.0.20210614205223-c89ad0ef0260/go.mod h1:rB3y/pIheORX5AHbxaSAw5Xr/U6bUAUtSLkgJcbOHIY=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=

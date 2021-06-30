@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -735,7 +734,7 @@ func TestGetJobLogs(t *testing.T) {
 			},
 		},
 		{
-			name: "success streaming logs",
+			name: "success streaming logs, with truncation",
 			monitor: &monitor{
 				logsClient: &coreTesting.MockLogsClient{
 					StreamFn: func(
@@ -747,14 +746,16 @@ func TestGetJobLogs(t *testing.T) {
 						logEntryCh := make(chan core.LogEntry)
 						errCh := make(chan error)
 						go func() {
-							// Send 2,000 lines
-							for i := 0; i < 2000; i++ {
+							// Send 32768 one-char lines for 65536 bytes total
+							// (one-char msg + one-char newline)
+							for i := 0; i < 32768; i++ {
 								select {
-								case logEntryCh <- core.LogEntry{Message: strconv.Itoa(i)}:
+								case logEntryCh <- core.LogEntry{Message: "l"}:
 								case <-ctx.Done():
 									return
 								}
 							}
+							close(logEntryCh)
 						}()
 						return logEntryCh, errCh, nil
 					},
@@ -767,9 +768,45 @@ func TestGetJobLogs(t *testing.T) {
 			},
 			assertions: func(logs string, err error) {
 				require.NoError(t, err)
-				// Make sure we got back only the first 1,000 lines
-				lines := strings.Split(logs, "\n")
-				assert.Len(t, lines, 1001) // 1,001 accounts for the trailing newline
+				assert.Contains(t, logs, "(Previous text omitted)\n")
+				assert.Equal(t, len(logs), 65535)
+			},
+		},
+		{
+			name: "success streaming logs, no truncation",
+			monitor: &monitor{
+				logsClient: &coreTesting.MockLogsClient{
+					StreamFn: func(
+						ctx context.Context,
+						_ string,
+						_ *core.LogsSelector,
+						_ *core.LogStreamOptions,
+					) (<-chan core.LogEntry, <-chan error, error) {
+						logEntryCh := make(chan core.LogEntry)
+						errCh := make(chan error)
+						go func() {
+							for i := 0; i < 32767; i++ {
+								select {
+								case logEntryCh <- core.LogEntry{Message: "l"}:
+								case <-ctx.Done():
+									return
+								}
+							}
+							close(logEntryCh)
+						}()
+						return logEntryCh, errCh, nil
+					},
+				},
+			},
+			job: core.Job{
+				Status: &core.JobStatus{
+					Phase: core.JobPhaseSucceeded,
+				},
+			},
+			assertions: func(logs string, err error) {
+				require.NoError(t, err)
+				assert.NotContains(t, logs, "(Previous text omitted)\n")
+				assert.Equal(t, len(logs), 65534)
 			},
 		},
 	}
