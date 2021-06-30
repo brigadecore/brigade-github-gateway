@@ -113,7 +113,7 @@ async function runSuite(event: Event): Promise<void> {
       buildMonitorJob(event)
     )
   ).run()
-  if (event.worker?.git?.ref == "/refs/heads/master") {
+  if (event.worker?.git?.ref == "master") {
     // Push "edge" images
     await new ConcurrentGroup(
       pushReceiverJob(event),
