@@ -133,12 +133,6 @@ that prevents the gateway from using this token for impersonating other gateways
 
 ### 3. Install the GitHub Gateway
 
-The Helm chart for the Brigade GitHub Gateway can be installed from source or
-installed from the
-[Brigadecore GitHub Container Regigistry](https://github.com/orgs/brigadecore/packages).
-
-#### Install from GitHub Container Registry
-
 For now, we're using the [GitHub Container Registry](https://ghcr.io) (which is
 an [OCI registry](https://helm.sh/docs/topics/registries/)) to host our Helm
 chart. Helm 3 has _experimental_ support for OCI registries. In the event that
@@ -150,8 +144,8 @@ To fetch the Brigade GitHub Gateway chart from the registry:
 
 ```console
   export HELM_EXPERIMENTAL_OCI=1
-  helm3 chart pull ghcr.io/brigadecore/brigade-github-gateway:v0.1.0
-  helm3 chart export ghcr.io/brigadecore/brigade-github-gateway:v0.1.0 -d ~/charts
+  helm chart pull ghcr.io/brigadecore/brigade-github-gateway:v0.1.0
+  helm chart export ghcr.io/brigadecore/brigade-github-gateway:v0.1.0 -d ~/charts
 ```
 
 As this chart requires custom configuration as described above to function
@@ -189,21 +183,6 @@ $ helm install brigade-github-gateway ~/charts/brigade-github-gateway \
     --namespace brigade-github-gateway \
     --values my-values.yaml
 ```
-
-#### Install from source
-
-To install the Brigade GitHub Gateway from source, start by cloning this
-repository and navigating to the chart directory:
-
-```console
-$ git clone git@github.com:brigadecore/brigade-github-gateway.git
-
-$ cd brigade-github-gateway/charts/brigade-github-gateway
-```
-
-Then, follow the steps similar to those shown above to create the chart values
-file needed for installation.  Just change the chart location, e.g. instead of
-`~/charts/brigade-github-gateway`, you can supply `.`.
 
 ### 4. (RECOMMENDED) Create a DNS Entry
 
