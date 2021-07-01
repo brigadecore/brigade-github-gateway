@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
 	"time"
+
+	"github.com/armon/circbuf"
 
 	"github.com/brigadecore/brigade/sdk/v2/core"
 	"github.com/brigadecore/brigade/sdk/v2/meta"
@@ -401,7 +402,6 @@ func (m *monitor) getJobLogs(
 	if !job.Status.Phase.IsTerminal() {
 		return "", nil
 	}
-	var jobLogsBuilder strings.Builder
 	logCh, errCh, err := m.logsClient.Stream(
 		ctx,
 		eventID,
@@ -413,12 +413,16 @@ func (m *monitor) getJobLogs(
 	if err != nil {
 		return "", err
 	}
-	// Arbitrarily limiting to 1000 log lines because we don't want to blow
-	// out the heap if a Job has produced an enormous amount of logs
-	const maxLines = 1000
-	var i int
+	// GitHub places a restriction on the text field for a Check Run at 65535
+	// characters, so we use this as a maximum and truncate if needed.
+	const maxBytes = 65535
+	// This circular buffer can be written to infinitely but maintains a fixed
+	// size, preserving the most recent bytes written - this is what we want
+	// as we wish to present the last logs written.
+	// Ignoring the error as it is only returned if the provided size is <= 0
+	jobLogsBuffer, _ := circbuf.NewBuffer(maxBytes)
 logLoop:
-	for i = 0; i < maxLines; i++ {
+	for {
 		var logEntry core.LogEntry
 		var ok bool
 		select {
@@ -426,10 +430,10 @@ logLoop:
 			if !ok { // The channel was closed. We got everything.
 				break logLoop
 			}
-			if _, err = jobLogsBuilder.WriteString(logEntry.Message); err != nil {
+			if _, err = jobLogsBuffer.Write([]byte(logEntry.Message)); err != nil {
 				return "", err
 			}
-			if _, err = jobLogsBuilder.WriteString("\n"); err != nil {
+			if _, err = jobLogsBuffer.Write([]byte("\n")); err != nil {
 				return "", err
 			}
 		case err, ok = <-errCh:
@@ -440,15 +444,10 @@ logLoop:
 			return "", ctx.Err()
 		}
 	}
-	if i > maxLines {
-		if _, err = jobLogsBuilder.WriteString(
-			fmt.Sprintf(
-				"--- !!! THESE LOGS HAVE BEEN TRUNCATED AFTER %d LINES !!! ---\n",
-				maxLines,
-			),
-		); err != nil {
-			return "", err
-		}
+	if jobLogsBuffer.TotalWritten() > maxBytes {
+		logBytes := jobLogsBuffer.Bytes()
+		copy(logBytes[0:], "(Previous text omitted)\n")
+		return string(logBytes), nil
 	}
-	return jobLogsBuilder.String(), nil
+	return jobLogsBuffer.String(), nil
 }
