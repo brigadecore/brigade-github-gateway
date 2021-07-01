@@ -48,8 +48,8 @@ receiver:
     repository: brigadecore/brigade-github-gateway-receiver
     ## tag should only be specified if you want to override Chart.appVersion
     ## The default tag is the value of .Chart.AppVersion
-    tag: edge
-    pullPolicy: Always
+    # tag:
+    pullPolicy: IfNotPresent
 
   github:
     ## This value should be the same as was specified when creating your GitHub
@@ -179,8 +179,8 @@ monitor:
     repository: brigadecore/brigade-github-gateway-monitor
     ## tag should only be specified if you want to override Chart.appVersion
     ## The default tag is the value of .Chart.AppVersion
-    tag: edge
-    pullPolicy: Always
+    # tag:
+    pullPolicy: IfNotPresent
 
   ## The interval at which this gateway's monitor component should scan Brigade
   ## to learn about events it should be tracking for the purpose of reporting
