@@ -133,20 +133,29 @@ that prevents the gateway from using this token for impersonating other gateways
 
 ### 3. Install the GitHub Gateway
 
-For now, you can only obtain the Helm chart for the Brigade GitHub Gateway by
-cloning this repository:
+For now, we're using the [GitHub Container Registry](https://ghcr.io) (which is
+an [OCI registry](https://helm.sh/docs/topics/registries/)) to host our Helm
+chart. Helm 3 has _experimental_ support for OCI registries. In the event that
+the Helm 3 dependency proves troublesome for Brigade users, or in the event that
+this experimental feature goes away, or isn't working like we'd hope, we will
+revisit this choice before going GA.
+
+To fetch the Brigade GitHub Gateway chart from the registry:
 
 ```console
-$ git clone git@github.com:brigadecore/brigade-github-gateway.git
-
-$ cd brigade-github-gateway/charts/brigade-github-gateway
+  export HELM_EXPERIMENTAL_OCI=1
+  helm chart pull ghcr.io/brigadecore/brigade-github-gateway:v0.1.0
+  helm chart export ghcr.io/brigadecore/brigade-github-gateway:v0.1.0 -d ~/charts
 ```
+
+As this chart requires custom configuration as described above to function
+properly, we'll need to create a chart values file with said config.
 
 Use the following command to extract the full set of configuration options into
 a file you can modify:
 
 ```console
-$ helm inspect values . > my-values.yaml
+$ helm inspect values ~/charts/brigade-github-gateway > my-values.yaml
 ```
 
 Edit `my-values.yaml`, making the following changes:
@@ -169,7 +178,7 @@ Save your changes to `my-values.yaml` and use the following command to install
 the gateway using the above customizations:
 
 ```console
-$ helm install brigade-github-gateway . \
+$ helm install brigade-github-gateway ~/charts/brigade-github-gateway \
     --create-namespace \
     --namespace brigade-github-gateway \
     --values my-values.yaml
