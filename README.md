@@ -266,7 +266,7 @@ should adjust this value to match a repository into which you have installed
 your new GitHub App.
 
 ```yaml
-apiVersion: brigade.sh/v2-alpha.5
+apiVersion: brigade.sh/v2-beta
 kind: Project
 metadata:
   id: github-demo
@@ -296,7 +296,7 @@ repository; not when they start watching it. This is a peculiarity of GitHub and
 not a peculiarity of this gateway.)
 
 ```yaml
-apiVersion: brigade.sh/v2-alpha.5
+apiVersion: brigade.sh/v2-beta
 kind: Project
 metadata:
   id: github-demo
