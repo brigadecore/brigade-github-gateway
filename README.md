@@ -144,8 +144,8 @@ To fetch the Brigade GitHub Gateway chart from the registry:
 
 ```console
   export HELM_EXPERIMENTAL_OCI=1
-  helm chart pull ghcr.io/brigadecore/brigade-github-gateway:v0.1.1
-  helm chart export ghcr.io/brigadecore/brigade-github-gateway:v0.1.1 -d ~/charts
+  helm chart pull ghcr.io/brigadecore/brigade-github-gateway:v0.2.0
+  helm chart export ghcr.io/brigadecore/brigade-github-gateway:v0.2.0 -d ~/charts
 ```
 
 As this chart requires custom configuration as described above to function
