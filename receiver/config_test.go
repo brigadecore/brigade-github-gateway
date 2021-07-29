@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/brigadecore/brigade-github-gateway/receiver/internal/http"
+	"github.com/brigadecore/brigade-foundations/http"
 	"github.com/brigadecore/brigade-github-gateway/receiver/internal/webhooks"
 	"github.com/brigadecore/brigade/sdk/v2/restmachinery"
 	clientRM "github.com/brigadecore/brigade/sdk/v2/restmachinery"

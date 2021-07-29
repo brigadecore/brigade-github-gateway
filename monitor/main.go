@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 
-	"github.com/brigadecore/brigade-github-gateway/internal/signals"
-	"github.com/brigadecore/brigade-github-gateway/internal/version"
+	"github.com/brigadecore/brigade-foundations/signals"
+	"github.com/brigadecore/brigade-foundations/version"
 	"github.com/brigadecore/brigade/sdk/v2/core"
 	"github.com/brigadecore/brigade/sdk/v2/system"
 )

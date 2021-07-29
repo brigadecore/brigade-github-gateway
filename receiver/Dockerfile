@@ -10,7 +10,7 @@ COPY go.sum go.sum
 
 RUN go build \
   -o bin/receiver \
-  -ldflags "-w -X github.com/brigadecore/brigade-github-gateway/internal/version.version=$VERSION -X github.com/brigadecore/brigade-github-gateway/internal/version.commit=$COMMIT" \
+  -ldflags "-w -X github.com/brigadecore/brigade-foundations/version.version=$VERSION -X github.com/brigadecore/brigade-foundations/version.commit=$COMMIT" \
   ./receiver
 
 FROM scratch
