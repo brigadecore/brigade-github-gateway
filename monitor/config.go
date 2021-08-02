@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/brigadecore/brigade-github-gateway/internal/os"
+	"github.com/brigadecore/brigade-foundations/os"
 	clientRM "github.com/brigadecore/brigade/sdk/v2/restmachinery"
 )
 

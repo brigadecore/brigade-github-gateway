@@ -5,10 +5,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/brigadecore/brigade-github-gateway/internal/signals"
-	"github.com/brigadecore/brigade-github-gateway/internal/version"
-	libHTTP "github.com/brigadecore/brigade-github-gateway/receiver/internal/http"
-	"github.com/brigadecore/brigade-github-gateway/receiver/internal/system"
+	libHTTP "github.com/brigadecore/brigade-foundations/http"
+	"github.com/brigadecore/brigade-foundations/signals"
+	"github.com/brigadecore/brigade-foundations/version"
 	"github.com/brigadecore/brigade-github-gateway/receiver/internal/webhooks"
 	"github.com/brigadecore/brigade/sdk/v2/core"
 	"github.com/gorilla/mux"
@@ -58,7 +57,7 @@ func main() {
 		router := mux.NewRouter()
 		router.StrictSlash(true)
 		router.Handle("/events", webhooksHandler).Methods(http.MethodPost)
-		router.HandleFunc("/healthz", system.Healthz).Methods(http.MethodGet)
+		router.HandleFunc("/healthz", libHTTP.Healthz).Methods(http.MethodGet)
 		serverConfig, err := serverConfig()
 		if err != nil {
 			log.Fatal(err)
