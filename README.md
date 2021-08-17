@@ -260,10 +260,9 @@ emitted into Brigade's event bus. You can subscribe to all event types emitted
 by the gateway, or just specific ones.
 
 In the example project definition below, we subscribe to all events emitted by
-the gateway, provided they've originated from the
-`brigadecore/brigade-github-gateway` repository (see the `repo` qualifier). You
-should adjust this value to match a repository into which you have installed
-your new GitHub App.
+the gateway, provided they've originated from the `example-org/example-repo`
+repository (see the `repo` qualifier). You should adjust this value to match a
+repository into which you have installed your new GitHub App.
 
 ```yaml
 apiVersion: brigade.sh/v2-beta
@@ -277,14 +276,14 @@ spec:
     types:
     - *
     qualifiers:
-      repo: brigadecore/brigade-github-gateway
+      repo: example-org/example-repo
   workerTemplate:
     defaultConfigFiles:
       brigade.js: |-
         const { events } = require("@brigadecore/brigadier");
 
         events.on("brigade.sh/github", "watch:started", () => {
-          console.log("Someone starred the brigadecore/brigade-github-gateway repository!");
+          console.log("Someone starred the example-org/example-repo repository!");
         });
 
         events.process();
@@ -307,14 +306,14 @@ spec:
     types:
     - watch:started
     qualifiers:
-      repo: brigadecore/brigade-github-gateway
+      repo: example-org/example-repo
   workerTemplate:
     defaultConfigFiles:
       brigade.js: |-
         const { events } = require("@brigadecore/brigadier");
 
         events.on("brigade.sh/github", "watch:started", () => {
-          console.log("Someone starred the brigadecore/brigade-github-gateway repository!");
+          console.log("Someone starred the example-org/example-repo repository!");
         });
 
         events.process();
