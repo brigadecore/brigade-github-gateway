@@ -6,13 +6,13 @@ metadata:
 description: A project that demonstrates integration with GitHub
 spec:
   eventSubscriptions:
-  - labels:
-      repo: brigadecore/test-repo
-    source: brigade.sh/github
+  - source: brigade.sh/github
     types:
     - watch:started
     - check_suite:requested
     - check_suite:rerequested
+    qualifiers:
+      repo: example-org/example-repo
   workerTemplate:
     defaultConfigFiles:
       brigade.js: |-
