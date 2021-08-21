@@ -39,24 +39,27 @@ func main() {
 		)
 	}
 
-	var webhooksHandler *webhooks.Handler
+	var signatureVerificationFilter libHTTP.Filter
 	{
-		var config webhooks.HandlerConfig
-		config, err = webhooksHandlerConfig()
+		config, err := signatureVerificationFilterConfig()
 		if err != nil {
 			log.Fatal(err)
 		}
-		webhooksHandler = &webhooks.Handler{
-			Service: webhooksService,
-			Config:  config,
-		}
+		signatureVerificationFilter =
+			webhooks.NewSignatureVerificationFilter(config)
 	}
 
 	var server libHTTP.Server
 	{
+		handler := webhooks.NewHandler(webhooksService)
 		router := mux.NewRouter()
 		router.StrictSlash(true)
-		router.Handle("/events", webhooksHandler).Methods(http.MethodPost)
+		router.Handle(
+			"/events",
+			http.HandlerFunc( // Make a handler from a function
+				signatureVerificationFilter.Decorate(handler.ServeHTTP),
+			),
+		).Methods(http.MethodPost)
 		router.HandleFunc("/healthz", libHTTP.Healthz).Methods(http.MethodGet)
 		serverConfig, err := serverConfig()
 		if err != nil {

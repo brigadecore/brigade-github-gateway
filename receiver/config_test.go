@@ -9,7 +9,6 @@ import (
 	"github.com/brigadecore/brigade-foundations/http"
 	"github.com/brigadecore/brigade-github-gateway/receiver/internal/webhooks"
 	"github.com/brigadecore/brigade/sdk/v2/restmachinery"
-	clientRM "github.com/brigadecore/brigade/sdk/v2/restmachinery"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,7 +24,7 @@ func TestAPIClientConfig(t *testing.T) {
 		assertions func(
 			address string,
 			token string,
-			opts clientRM.APIClientOptions,
+			opts restmachinery.APIClientOptions,
 			err error,
 		)
 	}{
@@ -35,7 +34,7 @@ func TestAPIClientConfig(t *testing.T) {
 			assertions: func(
 				_ string,
 				_ string,
-				_ clientRM.APIClientOptions,
+				_ restmachinery.APIClientOptions,
 				err error,
 			) {
 				require.Error(t, err)
@@ -257,37 +256,35 @@ func TestWebHookServiceConfig(t *testing.T) {
 	}
 }
 
-func TestWebhooksHandlerConfig(t *testing.T) {
+func TestSignatureVerificationFilterConfig(t *testing.T) {
+	const testSecret = "soylentgreenispeople"
 	testCases := []struct {
 		name       string
 		setup      func()
-		assertions func(webhooks.HandlerConfig, error)
+		assertions func(webhooks.SignatureVerificationFilterConfig, error)
 	}{
 		{
-			name: "GITHUB_APP_SHARED_SECRET not defined",
-			setup: func() {
-				os.Setenv("GITHUB_APP_ID", "123456789")
-			},
-			assertions: func(_ webhooks.HandlerConfig, err error) {
+			name: "GITHUB_APP_SHARED_SECRET not set",
+			assertions: func(
+				_ webhooks.SignatureVerificationFilterConfig,
+				err error,
+			) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "value not found for")
 				require.Contains(t, err.Error(), "GITHUB_APP_SHARED_SECRET")
 			},
 		},
 		{
-			name: "GITHUB_APP_SHARED_SECRET defined",
+			name: "success",
 			setup: func() {
-				os.Setenv("GITHUB_APP_SHARED_SECRET", "abcdefghijklmnopqrstuvwxyz")
+				os.Setenv("GITHUB_APP_SHARED_SECRET", testSecret)
 			},
-			assertions: func(config webhooks.HandlerConfig, err error) {
+			assertions: func(
+				config webhooks.SignatureVerificationFilterConfig,
+				err error,
+			) {
 				require.NoError(t, err)
-				require.Equal(
-					t,
-					webhooks.HandlerConfig{
-						SharedSecret: "abcdefghijklmnopqrstuvwxyz",
-					},
-					config,
-				)
+				require.Equal(t, []byte(testSecret), config.SharedSecret)
 			},
 		},
 	}
@@ -296,7 +293,7 @@ func TestWebhooksHandlerConfig(t *testing.T) {
 			if testCase.setup != nil {
 				testCase.setup()
 			}
-			config, err := webhooksHandlerConfig()
+			config, err := signatureVerificationFilterConfig()
 			testCase.assertions(config, err)
 		})
 	}
