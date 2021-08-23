@@ -62,13 +62,19 @@ func webhookServiceConfig() (webhooks.ServiceConfig, error) {
 	return config, err
 }
 
-// webhooksHandlerConfig populates configuration for the (HTTP/S) webhook
-// handler from environment variables.
-func webhooksHandlerConfig() (webhooks.HandlerConfig, error) {
-	config := webhooks.HandlerConfig{}
-	var err error
-	config.SharedSecret, err = os.GetRequiredEnvVar("GITHUB_APP_SHARED_SECRET")
-	return config, err
+// signatureVerificationFilterConfig populates configuration for the signature
+// verification filter from environment variables.
+func signatureVerificationFilterConfig() (
+	webhooks.SignatureVerificationFilterConfig,
+	error,
+) {
+	config := webhooks.SignatureVerificationFilterConfig{}
+	sharedSecret, err := os.GetRequiredEnvVar("GITHUB_APP_SHARED_SECRET")
+	if err != nil {
+		return config, err
+	}
+	config.SharedSecret = []byte(sharedSecret)
+	return config, nil
 }
 
 // serverConfig populates configuration for the HTTP/S server from environment

@@ -2,51 +2,46 @@ package webhooks
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"log"
 	"net/http"
 
 	"github.com/google/go-github/v33/github"
 )
 
-var emptyResponse = []byte("{}")
-
-// HandlerConfig encapsulates Handler configuration.
-type HandlerConfig struct {
-	// SharedSecret is the secret mutually agreed upon by this gateway and the
-	// GitHub App that sends webhooks (events) to this gateway. This secret can be
-	// used to validate the authenticity and integrity of payloads received by
-	// this gateway.
-	SharedSecret string
-}
-
-// Handler is an implementation of the http.Handler interface that can handle
+// handler is an implementation of the http.Handler interface that can handle
 // webhooks (events) from GitHub by delegating to a transport-agnostic Service
 // interface.
-type Handler struct {
-	// Service is a transport-agnostic webhook (event) handler.
-	Service Service
-	// Config encapsulates configuration for this Handler.
-	Config HandlerConfig
+type handler struct {
+	service Service
 }
 
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// NewHandler returns an implementation of the http.Handler interface that can
+// handle webhooks (events) from GitHub by delegating to a transport-agnostic
+// Service interface.
+func NewHandler(service Service) http.Handler {
+	return &handler{
+		service: service,
+	}
+}
+
+func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	w.Header().Set("Content-Type", "application/json")
 
-	payload, err := github.ValidatePayload(r, []byte(h.Config.SharedSecret))
-	if err != nil {
-		w.WriteHeader(http.StatusForbidden)
-		w.Write(emptyResponse) // nolint: errcheck
-		return
-	}
-
-	events, err := h.Service.Handle(r.Context(), github.WebHookType(r), payload)
+	payload, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
-	} else {
-		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	events, err := h.service.Handle(r.Context(), github.WebHookType(r), payload)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	responseObj := struct {
@@ -60,5 +55,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	responseJSON, _ := json.Marshal(responseObj)
 
+	w.WriteHeader(http.StatusOK)
 	w.Write(responseJSON) // nolint: errcheck
 }
