@@ -24,7 +24,7 @@ import (
 // https://docs.github.com/en/developers/apps/authenticating-with-github-apps
 func NewClient(
 	ctx context.Context,
-	appID int,
+	appID int64,
 	installationID int64,
 	keyPEM []byte,
 ) (*github.Client, error) {
@@ -35,7 +35,7 @@ func NewClient(
 		keyPEM,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to negotiate an installation token: %s", err)
+		return nil, fmt.Errorf("failed to negotiate an installation token: %s", err)
 	}
 	return github.NewClient(
 		oauth2.NewClient(
@@ -57,7 +57,7 @@ func NewClient(
 // installationID.
 func getInstallationToken(
 	ctx context.Context,
-	appID int,
+	appID int64,
 	installationID int64,
 	keyPEM []byte,
 ) (string, error) {
@@ -88,7 +88,7 @@ func getInstallationToken(
 // createJWT uses the provided appID and ASCII-armored x509 certificate key to
 // create a JWT that can be used to authenticate to GitHub APIs as the specified
 // App.
-func createJWT(appID int, keyPEM []byte) (string, error) {
+func createJWT(appID int64, keyPEM []byte) (string, error) {
 	key, err := jwt.ParseRSAPrivateKeyFromPEM(keyPEM)
 	if err != nil {
 		return "", err

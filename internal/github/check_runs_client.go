@@ -10,7 +10,7 @@ import (
 type CheckRunsClientFactory interface {
 	NewCheckRunsClient(
 		ctx context.Context,
-		appID int,
+		appID int64,
 		installationID int64,
 		apiKey []byte,
 	) (CheckRunsClient, error)
@@ -24,7 +24,7 @@ func NewCheckRunsClientFactory() CheckRunsClientFactory {
 
 func (c *checkRunsClientFactory) NewCheckRunsClient(
 	ctx context.Context,
-	appID int,
+	appID int64,
 	installationID int64,
 	apiKey []byte,
 ) (CheckRunsClient, error) {
