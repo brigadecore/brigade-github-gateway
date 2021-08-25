@@ -9,6 +9,7 @@ import (
 
 	"github.com/armon/circbuf"
 
+	ghlib "github.com/brigadecore/brigade-github-gateway/internal/github"
 	"github.com/brigadecore/brigade/sdk/v2/core"
 	"github.com/brigadecore/brigade/sdk/v2/meta"
 	"github.com/google/go-github/v33/github"
@@ -141,6 +142,31 @@ func (m *monitor) monitorEventInternal(
 			)
 		}
 
+		appIDStr, ok := event.Labels["appID"]
+		if !ok {
+			return errors.Errorf(
+				"no github app ID found in event %q labels; giving up",
+				eventID,
+			)
+		}
+		appID, err := strconv.ParseInt(appIDStr, 10, 64)
+		if err != nil {
+			return errors.Wrapf(
+				err,
+				"error parsing github app ID %q from event %q labels; giving up",
+				appIDStr,
+				eventID,
+			)
+		}
+		app, ok := m.config.gitHubApps[appID]
+		if !ok {
+			return errors.Errorf(
+				"no configuration found for app ID %d from event %q labels; giving up",
+				appID,
+				eventID,
+			)
+		}
+
 		// Loop through all of the Event's Jobs and report status for each
 		var allJobsCompleted = true
 		for _, job := range event.Worker.Jobs {
@@ -181,6 +207,7 @@ func (m *monitor) monitorEventInternal(
 				// We HAVEN'T started reporting on this Job, so create a GitHub CheckRun
 				if checkRunIDs[job.Name], err = m.createCheckRun(
 					ctx,
+					app,
 					installationID,
 					event.SourceState.State["owner"],
 					event.SourceState.State["repo"],
@@ -197,6 +224,7 @@ func (m *monitor) monitorEventInternal(
 				// We HAVE started reporting on this Job, so update the GitHub CheckRun
 				if err = m.updateCheckRun(
 					ctx,
+					app,
 					installationID,
 					event.SourceState.State["owner"],
 					event.SourceState.State["repo"],
@@ -251,6 +279,7 @@ func (m *monitor) monitorEventInternal(
 
 func (m *monitor) createCheckRun(
 	ctx context.Context,
+	app ghlib.App,
 	installationID int64,
 	owner string,
 	repo string,
@@ -290,9 +319,9 @@ func (m *monitor) createCheckRun(
 	}
 	checkRunsClient, err := m.checkRunsClientFactory.NewCheckRunsClient(
 		ctx,
-		m.config.githubAppID,
+		app.AppID,
 		installationID,
-		m.config.githubAPIKey,
+		[]byte(app.APIKey),
 	)
 	if err != nil {
 		return 0, err
@@ -314,6 +343,7 @@ func (m *monitor) createCheckRun(
 
 func (m *monitor) updateCheckRun(
 	ctx context.Context,
+	app ghlib.App,
 	installationID int64,
 	owner string,
 	repo string,
@@ -347,9 +377,9 @@ func (m *monitor) updateCheckRun(
 	}
 	checkRunsClient, err := m.checkRunsClientFactory.NewCheckRunsClient(
 		ctx,
-		m.config.githubAppID,
+		app.AppID,
 		installationID,
-		m.config.githubAPIKey,
+		[]byte(app.APIKey),
 	)
 	if err != nil {
 		return err

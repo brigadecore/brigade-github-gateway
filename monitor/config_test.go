@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/brigadecore/brigade/sdk/v2/restmachinery"
-	clientRM "github.com/brigadecore/brigade/sdk/v2/restmachinery"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,7 +17,7 @@ func TestAPIClientConfig(t *testing.T) {
 		assertions func(
 			address string,
 			token string,
-			opts clientRM.APIClientOptions,
+			opts restmachinery.APIClientOptions,
 			err error,
 		)
 	}{
@@ -27,7 +26,7 @@ func TestAPIClientConfig(t *testing.T) {
 			assertions: func(
 				_ string,
 				_ string,
-				_ clientRM.APIClientOptions,
+				_ restmachinery.APIClientOptions,
 				err error,
 			) {
 				require.Error(t, err)
@@ -93,27 +92,54 @@ func TestGetMonitorConfig(t *testing.T) {
 		assertions func(cfg monitorConfig, err error)
 	}{
 		{
-			name: "GITHUB_APP_ID not set",
+			name: "GITHUB_APPS_PATH not set",
 			assertions: func(_ monitorConfig, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "value not found for")
-				require.Contains(t, err.Error(), "GITHUB_APP_ID")
+				require.Contains(t, err.Error(), "GITHUB_APPS_PATH")
 			},
 		},
 		{
-			name: "github API key missing",
+			name: "GITHUB_APPS_PATH path does not exist",
 			setup: func() {
-				os.Setenv("GITHUB_APP_ID", "12345")
+				os.Setenv("GITHUB_APPS_PATH", "/completely/bogus/path")
 			},
-			assertions: func(cfg monitorConfig, err error) {
+			assertions: func(_ monitorConfig, err error) {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "no such file or directory")
+				require.Contains(
+					t,
+					err.Error(),
+					"file /completely/bogus/path does not exist",
+				)
+			},
+		},
+		{
+			name: "GITHUB_APPS_PATH does not contain valid json",
+			setup: func() {
+				appsFile, err := ioutil.TempFile("", "apps.json")
+				require.NoError(t, err)
+				defer appsFile.Close()
+				_, err = appsFile.Write([]byte("this is not json"))
+				require.NoError(t, err)
+				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+			},
+			assertions: func(_ monitorConfig, err error) {
+				require.Error(t, err)
+				require.Contains(
+					t, err.Error(), "invalid character",
+				)
 			},
 		},
 		{
 			name: "errors parsing LIST_EVENTS_INTERVAL",
 			setup: func() {
-				os.Setenv("GITHUB_API_KEY_PATH", tmpFile.Name())
+				appsFile, err := ioutil.TempFile("", "apps.json")
+				require.NoError(t, err)
+				defer appsFile.Close()
+				_, err =
+					appsFile.Write([]byte(`[{"appID":42,"apiKey":"foobar"}]`))
+				require.NoError(t, err)
+				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
 				os.Setenv("LIST_EVENTS_INTERVAL", "foo")
 			},
 			assertions: func(cfg monitorConfig, err error) {
@@ -125,6 +151,13 @@ func TestGetMonitorConfig(t *testing.T) {
 		{
 			name: "errors parsing EVENT_FOLLOW_UP_INTERVAL",
 			setup: func() {
+				appsFile, err := ioutil.TempFile("", "apps.json")
+				require.NoError(t, err)
+				defer appsFile.Close()
+				_, err =
+					appsFile.Write([]byte(`[{"appID":42,"apiKey":"foobar"}]`))
+				require.NoError(t, err)
+				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
 				os.Setenv("LIST_EVENTS_INTERVAL", "1m")
 				os.Setenv("EVENT_FOLLOW_UP_INTERVAL", "foo")
 			},
@@ -137,12 +170,20 @@ func TestGetMonitorConfig(t *testing.T) {
 		{
 			name: "success",
 			setup: func() {
+				appsFile, err := ioutil.TempFile("", "apps.json")
+				require.NoError(t, err)
+				defer appsFile.Close()
+				_, err =
+					appsFile.Write([]byte(`[{"appID":42,"apiKey":"foobar"}]`))
+				require.NoError(t, err)
+				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
 				os.Setenv("EVENT_FOLLOW_UP_INTERVAL", "1m")
 			},
 			assertions: func(cfg monitorConfig, err error) {
 				require.NoError(t, err)
-				require.Equal(t, 12345, cfg.githubAppID)
-				require.Equal(t, []byte("foo"), cfg.githubAPIKey)
+				require.Len(t, cfg.gitHubApps, 1)
+				require.Equal(t, int64(42), cfg.gitHubApps[42].AppID)
+				require.Equal(t, "foobar", cfg.gitHubApps[42].APIKey)
 				require.Equal(t, time.Minute, cfg.listEventsInterval)
 				require.Equal(t, time.Minute, cfg.eventFollowUpInterval)
 			},

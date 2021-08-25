@@ -1,11 +1,15 @@
 package main
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"time"
 
+	"github.com/brigadecore/brigade-foundations/file"
 	"github.com/brigadecore/brigade-foundations/os"
+	"github.com/brigadecore/brigade-github-gateway/internal/github"
 	clientRM "github.com/brigadecore/brigade/sdk/v2/restmachinery"
+	"github.com/pkg/errors"
 )
 
 // apiClientConfig populates the Brigade SDK's APIClientOptions from
@@ -30,19 +34,29 @@ func apiClientConfig() (string, string, clientRM.APIClientOptions, error) {
 func getMonitorConfig() (monitorConfig, error) {
 	config := monitorConfig{
 		healthcheckInterval: 30 * time.Second,
+		gitHubApps:          map[int64]github.App{},
 	}
-	var err error
-	if config.githubAppID, err =
-		os.GetRequiredIntFromEnvVar("GITHUB_APP_ID"); err != nil {
-		return config, err
-	}
-	githubAPIKeyPath := os.GetEnvVar(
-		"GITHUB_API_KEY_PATH",
-		"/app/github-api-key/github-api-key.pem",
-	)
-	config.githubAPIKey, err = ioutil.ReadFile(githubAPIKeyPath)
+	githubAppsPath, err := os.GetRequiredEnvVar("GITHUB_APPS_PATH")
 	if err != nil {
 		return config, err
+	}
+	var exists bool
+	if exists, err = file.Exists(githubAppsPath); err != nil {
+		return config, err
+	}
+	if !exists {
+		return config, errors.Errorf("file %s does not exist", githubAppsPath)
+	}
+	githubAppsBytes, err := ioutil.ReadFile(githubAppsPath)
+	if err != nil {
+		return config, err
+	}
+	githubApps := []github.App{}
+	if err = json.Unmarshal(githubAppsBytes, &githubApps); err != nil {
+		return config, err
+	}
+	for _, githubApp := range githubApps {
+		config.gitHubApps[githubApp.AppID] = githubApp
 	}
 	config.listEventsInterval, err =
 		os.GetDurationFromEnvVar("LIST_EVENTS_INTERVAL", 30*time.Second)

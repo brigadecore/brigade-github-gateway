@@ -16,8 +16,7 @@ type monitorConfig struct {
 	healthcheckInterval   time.Duration
 	listEventsInterval    time.Duration
 	eventFollowUpInterval time.Duration
-	githubAppID           int
-	githubAPIKey          []byte
+	gitHubApps            map[int64]github.App
 }
 
 // monitor is a component that continuously monitors certain events that the
