@@ -98,51 +98,58 @@ func TestWebHookServiceConfig(t *testing.T) {
 		assertions func(webhooks.ServiceConfig, error)
 	}{
 		{
-			name: "GITHUB_APP_ID not defined",
+			name: "GITHUB_APPS_PATH not set",
+			setup: func() {
+				os.Unsetenv("GITHUB_APPS_PATH")
+			},
+			assertions: func(_ webhooks.ServiceConfig, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "value not found for")
+				require.Contains(t, err.Error(), "GITHUB_APPS_PATH")
+			},
+		},
+		{
+			name: "GITHUB_APPS_PATH path does not exist",
+			setup: func() {
+				os.Setenv("GITHUB_APPS_PATH", "/completely/bogus/path")
+			},
 			assertions: func(_ webhooks.ServiceConfig, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
 					err.Error(),
-					"value not found for required environment variable GITHUB_APP_ID",
+					"file /completely/bogus/path does not exist",
 				)
 			},
 		},
 		{
-			name: "GITHUB_APP_ID not an int",
+			name: "GITHUB_APPS_PATH does not contain valid json",
 			setup: func() {
-				os.Setenv("GITHUB_APP_ID", "foobar")
+				appsFile, err := ioutil.TempFile("", "apps.json")
+				require.NoError(t, err)
+				defer appsFile.Close()
+				_, err = appsFile.Write([]byte("this is not json"))
+				require.NoError(t, err)
+				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
 			},
 			assertions: func(_ webhooks.ServiceConfig, err error) {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "not parsable as an int")
-				require.Contains(t, err.Error(), "foobar")
-			},
-		},
-		{
-			name: "github API key missing",
-			setup: func() {
-				os.Setenv("GITHUB_APP_ID", "42")
-			},
-			assertions: func(config webhooks.ServiceConfig, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "no such file or directory")
-				// But this should be resolved...
-				require.Equal(t, 42, config.GithubAppID)
-			},
-		},
-		{
-			name: "github API key present",
-			setup: func() {
-				os.Setenv("GITHUB_API_KEY_PATH", tmpFile.Name())
-			},
-			assertions: func(config webhooks.ServiceConfig, err error) {
-				require.NoError(t, err)
-				require.Equal(t, []byte("foo"), config.GithubAPIKey)
+				require.Contains(
+					t, err.Error(), "invalid character",
+				)
 			},
 		},
 		{
 			name: "CHECK_SUITE_ALLOWED_AUTHOR_ASSOCIATIONS not defined",
+			setup: func() {
+				appsFile, err := ioutil.TempFile("", "apps.json")
+				require.NoError(t, err)
+				defer appsFile.Close()
+				_, err =
+					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
+				require.NoError(t, err)
+				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+			},
 			assertions: func(config webhooks.ServiceConfig, err error) {
 				require.NoError(t, err)
 				require.Equal(
@@ -155,6 +162,13 @@ func TestWebHookServiceConfig(t *testing.T) {
 		{
 			name: "CHECK_SUITE_ALLOWED_AUTHOR_ASSOCIATIONS defined",
 			setup: func() {
+				appsFile, err := ioutil.TempFile("", "apps.json")
+				require.NoError(t, err)
+				defer appsFile.Close()
+				_, err =
+					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
+				require.NoError(t, err)
+				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
 				os.Setenv("CHECK_SUITE_ALLOWED_AUTHOR_ASSOCIATIONS", "FOO,BAR")
 			},
 			assertions: func(config webhooks.ServiceConfig, err error) {
@@ -168,6 +182,15 @@ func TestWebHookServiceConfig(t *testing.T) {
 		},
 		{
 			name: "EMITTED_EVENTS not defined",
+			setup: func() {
+				appsFile, err := ioutil.TempFile("", "apps.json")
+				require.NoError(t, err)
+				defer appsFile.Close()
+				_, err =
+					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
+				require.NoError(t, err)
+				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+			},
 			assertions: func(config webhooks.ServiceConfig, err error) {
 				require.NoError(t, err)
 				require.Equal(
@@ -180,6 +203,13 @@ func TestWebHookServiceConfig(t *testing.T) {
 		{
 			name: "EMITTED_EVENTS defined",
 			setup: func() {
+				appsFile, err := ioutil.TempFile("", "apps.json")
+				require.NoError(t, err)
+				defer appsFile.Close()
+				_, err =
+					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
+				require.NoError(t, err)
+				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
 				os.Setenv("EMITTED_EVENTS", "foo,bar")
 			},
 			assertions: func(config webhooks.ServiceConfig, err error) {
@@ -193,6 +223,15 @@ func TestWebHookServiceConfig(t *testing.T) {
 		},
 		{
 			name: "CHECK_SUITE_ON_PR not defined",
+			setup: func() {
+				appsFile, err := ioutil.TempFile("", "apps.json")
+				require.NoError(t, err)
+				defer appsFile.Close()
+				_, err =
+					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
+				require.NoError(t, err)
+				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+			},
 			assertions: func(config webhooks.ServiceConfig, err error) {
 				require.NoError(t, err)
 				require.True(t, config.CheckSuiteOnPR)
@@ -201,6 +240,13 @@ func TestWebHookServiceConfig(t *testing.T) {
 		{
 			name: "CHECK_SUITE_ON_PR not a bool",
 			setup: func() {
+				appsFile, err := ioutil.TempFile("", "apps.json")
+				require.NoError(t, err)
+				defer appsFile.Close()
+				_, err =
+					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
+				require.NoError(t, err)
+				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
 				os.Setenv("CHECK_SUITE_ON_PR", "i am not a bool")
 			},
 			assertions: func(_ webhooks.ServiceConfig, err error) {
@@ -211,6 +257,13 @@ func TestWebHookServiceConfig(t *testing.T) {
 		{
 			name: "CHECK_SUITE_ON_PR defined correctly",
 			setup: func() {
+				appsFile, err := ioutil.TempFile("", "apps.json")
+				require.NoError(t, err)
+				defer appsFile.Close()
+				_, err =
+					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
+				require.NoError(t, err)
+				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
 				os.Setenv("CHECK_SUITE_ON_PR", "false")
 			},
 			assertions: func(config webhooks.ServiceConfig, err error) {
@@ -220,6 +273,15 @@ func TestWebHookServiceConfig(t *testing.T) {
 		},
 		{
 			name: "CHECK_SUITE_ON_COMMENT not defined",
+			setup: func() {
+				appsFile, err := ioutil.TempFile("", "apps.json")
+				require.NoError(t, err)
+				defer appsFile.Close()
+				_, err =
+					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
+				require.NoError(t, err)
+				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+			},
 			assertions: func(config webhooks.ServiceConfig, err error) {
 				require.NoError(t, err)
 				require.True(t, config.CheckSuiteOnComment)
@@ -228,6 +290,13 @@ func TestWebHookServiceConfig(t *testing.T) {
 		{
 			name: "CHECK_SUITE_ON_COMMENT not a bool",
 			setup: func() {
+				appsFile, err := ioutil.TempFile("", "apps.json")
+				require.NoError(t, err)
+				defer appsFile.Close()
+				_, err =
+					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
+				require.NoError(t, err)
+				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
 				os.Setenv("CHECK_SUITE_ON_COMMENT", "i am not a bool")
 			},
 			assertions: func(_ webhooks.ServiceConfig, err error) {
@@ -238,6 +307,13 @@ func TestWebHookServiceConfig(t *testing.T) {
 		{
 			name: "CHECK_SUITE_ON_COMMENT defined correctly",
 			setup: func() {
+				appsFile, err := ioutil.TempFile("", "apps.json")
+				require.NoError(t, err)
+				defer appsFile.Close()
+				_, err =
+					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
+				require.NoError(t, err)
+				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
 				os.Setenv("CHECK_SUITE_ON_COMMENT", "false")
 			},
 			assertions: func(config webhooks.ServiceConfig, err error) {
@@ -257,34 +333,81 @@ func TestWebHookServiceConfig(t *testing.T) {
 }
 
 func TestSignatureVerificationFilterConfig(t *testing.T) {
-	const testSecret = "soylentgreenispeople"
 	testCases := []struct {
 		name       string
 		setup      func()
 		assertions func(webhooks.SignatureVerificationFilterConfig, error)
 	}{
 		{
-			name: "GITHUB_APP_SHARED_SECRET not set",
+			name: "GITHUB_APPS_PATH not set",
+			setup: func() {
+				os.Unsetenv("GITHUB_APPS_PATH")
+			},
 			assertions: func(
 				_ webhooks.SignatureVerificationFilterConfig,
 				err error,
 			) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "value not found for")
-				require.Contains(t, err.Error(), "GITHUB_APP_SHARED_SECRET")
+				require.Contains(t, err.Error(), "GITHUB_APPS_PATH")
+			},
+		},
+		{
+			name: "GITHUB_APPS_PATH path does not exist",
+			setup: func() {
+				os.Setenv("GITHUB_APPS_PATH", "/completely/bogus/path")
+			},
+			assertions: func(
+				_ webhooks.SignatureVerificationFilterConfig,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Contains(
+					t,
+					err.Error(),
+					"file /completely/bogus/path does not exist",
+				)
+			},
+		},
+		{
+			name: "GITHUB_APPS_PATH does not contain valid json",
+			setup: func() {
+				appsFile, err := ioutil.TempFile("", "apps.json")
+				require.NoError(t, err)
+				defer appsFile.Close()
+				_, err = appsFile.Write([]byte("this is not json"))
+				require.NoError(t, err)
+				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+			},
+			assertions: func(
+				_ webhooks.SignatureVerificationFilterConfig,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Contains(
+					t, err.Error(), "invalid character",
+				)
 			},
 		},
 		{
 			name: "success",
 			setup: func() {
-				os.Setenv("GITHUB_APP_SHARED_SECRET", testSecret)
+				appsFile, err := ioutil.TempFile("", "apps.json")
+				require.NoError(t, err)
+				defer appsFile.Close()
+				_, err =
+					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
+				require.NoError(t, err)
+				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
 			},
 			assertions: func(
 				config webhooks.SignatureVerificationFilterConfig,
 				err error,
 			) {
 				require.NoError(t, err)
-				require.Equal(t, []byte(testSecret), config.SharedSecret)
+				require.Len(t, config.GitHubApps, 1)
+				require.Equal(t, int64(42), config.GitHubApps[42].AppID)
+				require.Equal(t, "foobar", config.GitHubApps[42].SharedSecret)
 			},
 		},
 	}

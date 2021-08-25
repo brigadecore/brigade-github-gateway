@@ -1340,6 +1340,7 @@ func TestHandle(t *testing.T) {
 			testCase.service.config.EmittedEvents = []string{"*"}
 			events, err := testCase.service.Handle(
 				context.Background(),
+				42, // Just a fake app ID
 				testCase.eventType,
 				testCase.eventBytes(),
 			)
