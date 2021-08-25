@@ -18,17 +18,26 @@ brigade:
   ## Whether to ignore cert warning from the API server
   apiIgnoreCertWarnings: true
 
-## You must create a GitHub App (https://github.com/settings/apps/new)
-## corresponding to this Brigade GitHub Gateway.
+## One gateway can support multiple GitHub Apps.
+## (https://github.com/settings/apps/new)
 github:
-  ## This is the unique ID of your GitHub App. It is assigned by GitHub and can
-  ## be retrieved from your GitHub App's main page after you have created it.
-  appID: 
-  ## A PEM-formatted x509 key for your GitHub App. This value should begin with
-  ## "-----BEGIN RSA PRIVATE KEY-----" and end with
-  ## "-----END RSA PRIVATE KEY-----"
-  apiKey: |
-    REQUIRED: Your key goes here.
+  apps:
+    ## This is the unique ID of your GitHub App. It is assigned by GitHub and
+    ## can be retrieved from your GitHub App's main page after you have created
+    ## it.
+  - appID:
+    ## A PEM-formatted x509 key for your GitHub App. This value should begin
+    ## with "-----BEGIN RSA PRIVATE KEY-----" and end with
+    ## "-----END RSA PRIVATE KEY-----"
+    apiKey: |
+      REQUIRED: Your key goes here.
+    ## This value should be the same as was specified when creating your GitHub
+    ## App that corresponds to this gateway. GitHub will use this secret in
+    ## signing webhook payloads and the gateway can use this value to validate
+    ## those signatures. This allows the gateway to obtain assurances that a
+    ## webhook did indeed originate from GitHub and hasn't been tampered with
+    ## in-transit.
+    sharedSecret:
 
 ## All settings for the receiver
 receiver:
@@ -52,13 +61,6 @@ receiver:
     pullPolicy: IfNotPresent
 
   github:
-    ## This value should be the same as was specified when creating your GitHub
-    ## App that corresponds to this gateway. GitHub will use this secret in
-    ## signing webhook payloads and the gateway can use this value to validate
-    ## those signatures. This allows the gateway to obtain assurances that a
-    ## webhook did indeed originate from GitHub and hasn't been tampered with
-    ## in-transit.
-    sharedSecret:
     checkSuite:
       ## The author associations who are allowed to have their PR events and
       ## "/brig check" or "/brig run" comments trigger the creation of a GitHub

@@ -21,6 +21,7 @@ spec:
         {{- if .Values.receiver.tls.enabled }}
         checksum/cert-secret: {{ include (print $.Template.BasePath "/receiver/cert-secret.yaml") . | sha256sum }}
         {{- end }}
+        checksum/config-secret: {{ include (print $.Template.BasePath "/common/config-secret.yaml") . | sha256sum }}
     spec:
       serviceAccount: {{ include "gateway.receiver.fullname" . }}
       containers:
@@ -36,13 +37,6 @@ spec:
         - name: TLS_KEY_PATH
           value: /app/certs/tls.key
         {{- end }}
-        - name: GITHUB_APP_ID
-          value: {{ quote .Values.github.appID }}
-        - name: GITHUB_APP_SHARED_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "gateway.receiver.fullname" . }}
-              key: githubAppSharedSecret
         - name: CHECK_SUITE_ON_PR
           value: {{ quote .Values.receiver.github.checkSuite.onPR }}
         - name: CHECK_SUITE_ON_COMMENT
@@ -56,6 +50,8 @@ spec:
               key: brigadeAPIToken
         - name: API_IGNORE_CERT_WARNINGS
           value: {{ quote .Values.brigade.apiIgnoreCertWarnings }}
+        - name: GITHUB_APPS_PATH
+          value: /app/config/github-apps.json
         {{ if .Values.receiver.github.checkSuite.allowedAuthorAssociations }}
         - name: CHECK_SUITE_ALLOWED_AUTHOR_ASSOCIATIONS
           value: {{ join "," .Values.receiver.github.checkSuite.allowedAuthorAssociations | quote }}
@@ -70,8 +66,8 @@ spec:
           mountPath: /app/certs
           readOnly: true
         {{- end }}
-        - name: github-api-key
-          mountPath: /app/github-api-key
+        - name: config
+          mountPath: /app/config
           readOnly: true
         livenessProbe:
           httpGet:
@@ -97,9 +93,9 @@ spec:
         secret:
           secretName: {{ include "gateway.receiver.fullname" . }}-cert
       {{- end }}
-      - name: github-api-key
+      - name: config
         secret:
-          secretName: {{ include "gateway.fullname" . }}-github-api-key
+          secretName: {{ include "gateway.fullname" . }}-config
       {{- with .Values.receiver.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
