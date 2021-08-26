@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/google/go-github/v33/github"
 )
@@ -30,6 +31,17 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
+	appIDStr := r.Header.Get("X-GitHub-Hook-Installation-Target-ID")
+	if appIDStr == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	appID, err := strconv.ParseInt(appIDStr, 10, 64)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	payload, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Println(err)
@@ -37,7 +49,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	events, err := h.service.Handle(r.Context(), github.WebHookType(r), payload)
+	events, err :=
+		h.service.Handle(r.Context(), appID, github.WebHookType(r), payload)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)

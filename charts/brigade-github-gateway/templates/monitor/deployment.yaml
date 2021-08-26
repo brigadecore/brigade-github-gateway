@@ -18,6 +18,7 @@ spec:
         {{- include "gateway.monitor.labels" . | nindent 8 }}
       annotations:
         checksum/secret: {{ include (print $.Template.BasePath "/monitor/secret.yaml") . | sha256sum }}
+        checksum/config-secret: {{ include (print $.Template.BasePath "/common/config-secret.yaml") . | sha256sum }}
     spec:
       serviceAccount: {{ include "gateway.monitor.fullname" . }}
       containers:
@@ -34,20 +35,20 @@ spec:
               key: brigadeAPIToken
         - name: API_IGNORE_CERT_WARNINGS
           value: {{ quote .Values.brigade.apiIgnoreCertWarnings }}
-        - name: GITHUB_APP_ID
-          value: {{ quote .Values.github.appID }}
+        - name: GITHUB_APPS_PATH
+          value: /app/config/github-apps.json
         - name: LIST_EVENTS_INTERVAL
           value: {{ .Values.monitor.listEventsInterval }}
         - name: EVENT_FOLLOW_UP_INTERVAL
           value: {{ .Values.monitor.eventFollowUpInterval }}
         volumeMounts:
-        - name: github-api-key
-          mountPath: /app/github-api-key
+        - name: config
+          mountPath: /app/config
           readOnly: true
       volumes:
-      - name: github-api-key
+      - name: config
         secret:
-          secretName: {{ include "gateway.fullname" . }}-github-api-key
+          secretName: {{ include "gateway.fullname" . }}-config
       {{- with .Values.monitor.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

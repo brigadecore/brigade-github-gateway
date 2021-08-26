@@ -97,6 +97,12 @@ func TestMonitorEventInternal(t *testing.T) {
 	var testCheckRunID int64 = 42
 	testConfig := monitorConfig{
 		eventFollowUpInterval: time.Second,
+		gitHubApps: map[int64]ghlib.App{
+			86: {
+				AppID:  86,
+				APIKey: "abcdefg",
+			},
+		},
 	}
 	testCases := []struct {
 		name       string
@@ -120,12 +126,68 @@ func TestMonitorEventInternal(t *testing.T) {
 			},
 		},
 		{
+			name: "app id missing from event labels",
+			monitor: &monitor{
+				config: testConfig,
+				eventsClient: &coreTesting.MockEventsClient{
+					GetFn: func(context.Context, string) (core.Event, error) {
+						return core.Event{}, nil
+					},
+				},
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "no github app ID found in event")
+			},
+		},
+		{
+			name: "app id not parseable as int",
+			monitor: &monitor{
+				config: testConfig,
+				eventsClient: &coreTesting.MockEventsClient{
+					GetFn: func(context.Context, string) (core.Event, error) {
+						return core.Event{
+							Labels: map[string]string{
+								"appID": "foobar",
+							},
+						}, nil
+					},
+				},
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error parsing github app ID")
+			},
+		},
+		{
+			name: "app configuration not found",
+			monitor: &monitor{
+				config: testConfig,
+				eventsClient: &coreTesting.MockEventsClient{
+					GetFn: func(context.Context, string) (core.Event, error) {
+						return core.Event{
+							Labels: map[string]string{
+								"appID": "99",
+							},
+						}, nil
+					},
+				},
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "no configuration found for app ID")
+			},
+		},
+		{
 			name: "error getting job logs",
 			monitor: &monitor{
 				config: testConfig,
 				eventsClient: &coreTesting.MockEventsClient{
 					GetFn: func(context.Context, string) (core.Event, error) {
 						return core.Event{
+							Labels: map[string]string{
+								"appID": "86",
+							},
 							Worker: &core.Worker{
 								Jobs: []core.Job{
 									{
@@ -157,6 +219,9 @@ func TestMonitorEventInternal(t *testing.T) {
 				eventsClient: &coreTesting.MockEventsClient{
 					GetFn: func(context.Context, string) (core.Event, error) {
 						return core.Event{
+							Labels: map[string]string{
+								"appID": "86",
+							},
 							SourceState: &core.SourceState{
 								State: map[string]string{
 									"installationID": "foo", // Cannot be parsed as an int
@@ -191,6 +256,9 @@ func TestMonitorEventInternal(t *testing.T) {
 				eventsClient: &coreTesting.MockEventsClient{
 					GetFn: func(context.Context, string) (core.Event, error) {
 						return core.Event{
+							Labels: map[string]string{
+								"appID": "86",
+							},
 							SourceState: &core.SourceState{
 								State: map[string]string{
 									"installationID": strconv.Itoa(int(testCheckRunID)),
@@ -215,7 +283,7 @@ func TestMonitorEventInternal(t *testing.T) {
 				checkRunsClientFactory: &ghlib.MockCheckRunsClientFactory{
 					NewCheckRunsClientFn: func(
 						context.Context,
-						int,
+						int64,
 						int64,
 						[]byte,
 					) (ghlib.CheckRunsClient, error) {
@@ -245,6 +313,9 @@ func TestMonitorEventInternal(t *testing.T) {
 				eventsClient: &coreTesting.MockEventsClient{
 					GetFn: func(context.Context, string) (core.Event, error) {
 						return core.Event{
+							Labels: map[string]string{
+								"appID": "86",
+							},
 							SourceState: &core.SourceState{
 								State: map[string]string{
 									"installationID": "42",
@@ -269,7 +340,7 @@ func TestMonitorEventInternal(t *testing.T) {
 				checkRunsClientFactory: &ghlib.MockCheckRunsClientFactory{
 					NewCheckRunsClientFn: func(
 						context.Context,
-						int,
+						int64,
 						int64,
 						[]byte,
 					) (ghlib.CheckRunsClient, error) {
@@ -316,6 +387,10 @@ func TestMonitorEventInternal(t *testing.T) {
 }
 
 func TestCreateCheckRun(t *testing.T) {
+	testApp := ghlib.App{
+		AppID:  42,
+		APIKey: "foobar",
+	}
 	const testInstallationID = 99
 	const testOwner = "brigadecore"
 	const testRepo = "test"
@@ -347,7 +422,7 @@ func TestCreateCheckRun(t *testing.T) {
 				checkRunsClientFactory: &ghlib.MockCheckRunsClientFactory{
 					NewCheckRunsClientFn: func(
 						context.Context,
-						int,
+						int64,
 						int64,
 						[]byte,
 					) (ghlib.CheckRunsClient, error) {
@@ -367,7 +442,7 @@ func TestCreateCheckRun(t *testing.T) {
 				checkRunsClientFactory: &ghlib.MockCheckRunsClientFactory{
 					NewCheckRunsClientFn: func(
 						context.Context,
-						int,
+						int64,
 						int64,
 						[]byte,
 					) (ghlib.CheckRunsClient, error) {
@@ -397,7 +472,7 @@ func TestCreateCheckRun(t *testing.T) {
 				checkRunsClientFactory: &ghlib.MockCheckRunsClientFactory{
 					NewCheckRunsClientFn: func(
 						context.Context,
-						int,
+						int64,
 						int64,
 						[]byte,
 					) (ghlib.CheckRunsClient, error) {
@@ -417,9 +492,9 @@ func TestCreateCheckRun(t *testing.T) {
 								)
 								require.Equal(t, testHeadSHA, opts.HeadSHA)
 								require.Equal(t, testStatus, *opts.Status)
-								require.Equal(t, *testJob.Status.Started, *&opts.StartedAt.Time)
+								require.Equal(t, *testJob.Status.Started, opts.StartedAt.Time)
 								require.Equal(t, testConclusion, *opts.Conclusion)
-								require.Equal(t, *testJob.Status.Ended, *&opts.CompletedAt.Time)
+								require.Equal(t, *testJob.Status.Ended, opts.CompletedAt.Time)
 								require.Equal(
 									t,
 									fmt.Sprintf("%s:%s", testEvent.ProjectID, testJob.Name),
@@ -443,6 +518,7 @@ func TestCreateCheckRun(t *testing.T) {
 		t.Run(string(testCase.name), func(t *testing.T) {
 			checkRunID, err := testCase.monitor.createCheckRun(
 				context.Background(),
+				testApp,
 				testInstallationID,
 				testOwner,
 				testRepo,
@@ -459,6 +535,10 @@ func TestCreateCheckRun(t *testing.T) {
 }
 
 func TestUpdateCheckRun(t *testing.T) {
+	testApp := ghlib.App{
+		AppID:  42,
+		APIKey: "foobar",
+	}
 	const testInstallationID = 99
 	const testOwner = "brigadecore"
 	const testRepo = "test"
@@ -489,7 +569,7 @@ func TestUpdateCheckRun(t *testing.T) {
 				checkRunsClientFactory: &ghlib.MockCheckRunsClientFactory{
 					NewCheckRunsClientFn: func(
 						context.Context,
-						int,
+						int64,
 						int64,
 						[]byte,
 					) (ghlib.CheckRunsClient, error) {
@@ -508,7 +588,7 @@ func TestUpdateCheckRun(t *testing.T) {
 				checkRunsClientFactory: &ghlib.MockCheckRunsClientFactory{
 					NewCheckRunsClientFn: func(
 						context.Context,
-						int,
+						int64,
 						int64,
 						[]byte,
 					) (ghlib.CheckRunsClient, error) {
@@ -538,7 +618,7 @@ func TestUpdateCheckRun(t *testing.T) {
 				checkRunsClientFactory: &ghlib.MockCheckRunsClientFactory{
 					NewCheckRunsClientFn: func(
 						context.Context,
-						int,
+						int64,
 						int64,
 						[]byte,
 					) (ghlib.CheckRunsClient, error) {
@@ -559,7 +639,7 @@ func TestUpdateCheckRun(t *testing.T) {
 								)
 								require.Equal(t, testStatus, *opts.Status)
 								require.Equal(t, testConclusion, *opts.Conclusion)
-								require.Equal(t, *testJob.Status.Ended, *&opts.CompletedAt.Time)
+								require.Equal(t, *testJob.Status.Ended, opts.CompletedAt.Time)
 								require.Equal(
 									t,
 									fmt.Sprintf("%s:%s", testEvent.ProjectID, testJob.Name),
@@ -582,6 +662,7 @@ func TestUpdateCheckRun(t *testing.T) {
 		t.Run(string(testCase.name), func(t *testing.T) {
 			err := testCase.monitor.updateCheckRun(
 				context.Background(),
+				testApp,
 				testInstallationID,
 				testOwner,
 				testRepo,

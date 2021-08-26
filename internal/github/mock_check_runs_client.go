@@ -9,7 +9,7 @@ import (
 type MockCheckRunsClientFactory struct {
 	NewCheckRunsClientFn func(
 		ctx context.Context,
-		appID int,
+		appID int64,
 		installationID int64,
 		apiKey []byte,
 	) (CheckRunsClient, error)
@@ -17,7 +17,7 @@ type MockCheckRunsClientFactory struct {
 
 func (m *MockCheckRunsClientFactory) NewCheckRunsClient(
 	ctx context.Context,
-	appID int,
+	appID int64,
 	installationID int64,
 	apiKey []byte,
 ) (CheckRunsClient, error) {

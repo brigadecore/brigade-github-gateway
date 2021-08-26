@@ -2,14 +2,9 @@
 
 This is a work-in-progress
 [Brigade 2](https://github.com/brigadecore/brigade/tree/v2)
-compatible gateway that propagates upstream events from GitHub to Brigade 2's
-event bus.
-
-## What it Does
-
-This gateway can be used to receive events (webhooks) from a
-[GitHub App](https://docs.github.com/en/developers/apps/about-apps) and emit
-them into Brigade 2's event bus.
+compatible gateway that can be used to receive events (webhooks) from one or
+more [GitHub Apps](https://docs.github.com/en/developers/apps/about-apps)
+and propagate them into Brigade 2's event bus.
 
 ## Installation
 
@@ -47,6 +42,9 @@ want to do this or are unable, we'll cover that scenario as well.
 A [GitHub App](https://docs.github.com/en/developers/apps/about-apps) is a
 special kind of trusted entity that is "installable" into GitHub repositories to
 enable integrations.
+
+This gateway can support multiple GitHub Apps, but these instructions walk you
+through the steps for setting up just one.
 
 * Visit https://github.com/settings/apps/new.
 
@@ -165,14 +163,16 @@ Edit `my-values.yaml`, making the following changes:
 
 * `brigade.apiToken`: Service account token from step 2
 
-* `github.appID`: App ID from step 1
+* `github.apps`: Specify the details of your GitHub App(s), including:
 
-* `github.appID.apiKey`: The private key downloaded in step 1, beginning with
-  `-----BEGIN RSA PRIVATE KEY-----` and ending with
-  `-----END RSA PRIVATE KEY-----`. All line breaks should be preserved and the
-  beginning of each line should be indented exactly four spaces.
+    * `appID`: App ID from step 1
 
-* `receiver.github.sharedSecret`: Shared secret from step 1
+    * `apiKey`: The private key downloaded in step 1, beginning
+      with `-----BEGIN RSA PRIVATE KEY-----` and ending with
+      `-----END RSA PRIVATE KEY-----`. All line breaks should be preserved and
+      the beginning of each line should be indented exactly four spaces.
+
+    * `sharedSecret`: Shared secret from step 1
 
 Save your changes to `my-values.yaml` and use the following command to install
 the gateway using the above customizations:

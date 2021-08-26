@@ -2,12 +2,16 @@ package main
 
 // nolint: lll
 import (
+	"encoding/json"
 	"io/ioutil"
 
+	"github.com/brigadecore/brigade-foundations/file"
 	"github.com/brigadecore/brigade-foundations/http"
 	"github.com/brigadecore/brigade-foundations/os"
+	"github.com/brigadecore/brigade-github-gateway/internal/github"
 	"github.com/brigadecore/brigade-github-gateway/receiver/internal/webhooks"
 	"github.com/brigadecore/brigade/sdk/v2/restmachinery"
+	"github.com/pkg/errors"
 )
 
 // apiClientConfig populates the Brigade SDK's APIClientOptions from
@@ -31,6 +35,7 @@ func apiClientConfig() (string, string, restmachinery.APIClientOptions, error) {
 // from environment variables.
 func webhookServiceConfig() (webhooks.ServiceConfig, error) {
 	config := webhooks.ServiceConfig{
+		GitHubApps: map[int64]github.App{},
 		CheckSuiteAllowedAuthorAssociations: os.GetStringSliceFromEnvVar(
 			"CHECK_SUITE_ALLOWED_AUTHOR_ASSOCIATIONS",
 			[]string{},
@@ -41,17 +46,27 @@ func webhookServiceConfig() (webhooks.ServiceConfig, error) {
 		),
 	}
 	var err error
-	if config.GithubAppID, err =
-		os.GetRequiredIntFromEnvVar("GITHUB_APP_ID"); err != nil {
+	githubAppsPath, err := os.GetRequiredEnvVar("GITHUB_APPS_PATH")
+	if err != nil {
 		return config, err
 	}
-	githubAPIKeyPath := os.GetEnvVar(
-		"GITHUB_API_KEY_PATH",
-		"/app/github-api-key/github-api-key.pem",
-	)
-	if config.GithubAPIKey, err =
-		ioutil.ReadFile(githubAPIKeyPath); err != nil {
+	var exists bool
+	if exists, err = file.Exists(githubAppsPath); err != nil {
 		return config, err
+	}
+	if !exists {
+		return config, errors.Errorf("file %s does not exist", githubAppsPath)
+	}
+	githubAppsBytes, err := ioutil.ReadFile(githubAppsPath)
+	if err != nil {
+		return config, err
+	}
+	githubApps := []github.App{}
+	if err = json.Unmarshal(githubAppsBytes, &githubApps); err != nil {
+		return config, err
+	}
+	for _, githubApp := range githubApps {
+		config.GitHubApps[githubApp.AppID] = githubApp
 	}
 	if config.CheckSuiteOnPR, err =
 		os.GetBoolFromEnvVar("CHECK_SUITE_ON_PR", true); err != nil {
@@ -68,12 +83,31 @@ func signatureVerificationFilterConfig() (
 	webhooks.SignatureVerificationFilterConfig,
 	error,
 ) {
-	config := webhooks.SignatureVerificationFilterConfig{}
-	sharedSecret, err := os.GetRequiredEnvVar("GITHUB_APP_SHARED_SECRET")
+	config := webhooks.SignatureVerificationFilterConfig{
+		GitHubApps: map[int64]github.App{},
+	}
+	githubAppsPath, err := os.GetRequiredEnvVar("GITHUB_APPS_PATH")
 	if err != nil {
 		return config, err
 	}
-	config.SharedSecret = []byte(sharedSecret)
+	var exists bool
+	if exists, err = file.Exists(githubAppsPath); err != nil {
+		return config, err
+	}
+	if !exists {
+		return config, errors.Errorf("file %s does not exist", githubAppsPath)
+	}
+	githubAppsBytes, err := ioutil.ReadFile(githubAppsPath)
+	if err != nil {
+		return config, err
+	}
+	githubApps := []github.App{}
+	if err := json.Unmarshal(githubAppsBytes, &githubApps); err != nil {
+		return config, err
+	}
+	for _, githubApp := range githubApps {
+		config.GitHubApps[githubApp.AppID] = githubApp
+	}
 	return config, nil
 }
 

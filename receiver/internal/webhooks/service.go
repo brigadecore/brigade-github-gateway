@@ -22,11 +22,8 @@ var (
 // ServiceConfig encapsulates configuration options for webhook-handling
 // service.
 type ServiceConfig struct {
-	// GithubAppID specifies the ID of a GitHub App.
-	GithubAppID int
-	// GithubAPIKey is the private API key for the GitHub App specified by the
-	// GithubAppID field.
-	GithubAPIKey []byte
+	// GitHubApps is a map of GitHup App configurations indexed by App ID.
+	GitHubApps map[int64]ghlib.App
 	// CheckSuiteAllowedAuthorAssociations enumerates the author associations who
 	// are allowed to have their PR events and "/brig check" or "/brig run"
 	// comments trigger the creation of a GitHub CheckSuite. Possible values are:
@@ -64,6 +61,7 @@ type Service interface {
 	// Handle handles a GitHub webhook (event).
 	Handle(
 		ctx context.Context,
+		appID int64,
 		eventType string,
 		payload []byte,
 	) (core.EventList, error)
@@ -89,6 +87,7 @@ func NewService(
 // nolint: gocyclo
 func (s *service) Handle(
 	ctx context.Context,
+	appID int64,
 	eventType string,
 	payload []byte,
 ) (core.EventList, error) {
@@ -102,6 +101,9 @@ func (s *service) Handle(
 	brigadeEvent := core.Event{
 		Source:  "brigade.sh/github",
 		Payload: string(payload),
+		Labels: map[string]string{
+			"appID": strconv.FormatInt(appID, 10),
+		},
 	}
 
 	// Most of this function is just a giant type switch that extracts relevant
@@ -352,13 +354,18 @@ func (s *service) Handle(
 			s.config.CheckSuiteOnComment &&
 			s.isAllowedAuthorAssociation(e.GetComment().GetAuthorAssociation()) {
 			var pr *github.PullRequest
-			if pr, err = s.getPRFromIssueCommentEvent(ctx, *e); err != nil {
+			if pr, err = s.getPRFromIssueCommentEvent(
+				ctx,
+				s.config.GitHubApps[appID],
+				*e,
+			); err != nil {
 				// Log it and continue on. We can (and still should) emit the original
 				// event into Brigade.
 				log.Println(err)
 			} else {
 				if err = s.requestCheckSuite(
 					ctx,
+					s.config.GitHubApps[appID],
 					e.GetInstallation().GetID(),
 					e.GetRepo().GetOwner().GetLogin(),
 					e.GetRepo().GetName(),
@@ -523,6 +530,7 @@ func (s *service) Handle(
 				s.isAllowedAuthorAssociation(e.GetPullRequest().GetAuthorAssociation()) {
 				if err = s.requestCheckSuite(
 					ctx,
+					s.config.GitHubApps[appID],
 					e.GetInstallation().GetID(),
 					e.GetRepo().GetOwner().GetLogin(),
 					e.GetRepo().GetName(),
@@ -751,13 +759,14 @@ func getTitlesFromPR(pr *github.PullRequest) (string, string) {
 // given github.IssueCommentEvent.
 func (s *service) getPRFromIssueCommentEvent(
 	ctx context.Context,
+	app ghlib.App,
 	ice github.IssueCommentEvent,
 ) (*github.PullRequest, error) {
 	ghClient, err := ghlib.NewClient(
 		ctx,
-		s.config.GithubAppID,
+		app.AppID,
 		ice.GetInstallation().GetID(),
-		[]byte(s.config.GithubAPIKey),
+		[]byte(app.APIKey),
 	)
 	if err != nil {
 		return nil, errors.Wrapf(
@@ -785,6 +794,7 @@ func (s *service) getPRFromIssueCommentEvent(
 // yet, one is created and its initial run is requested.
 func (s *service) requestCheckSuite(
 	ctx context.Context,
+	app ghlib.App,
 	installationID int64,
 	repoOwner string,
 	repoName string,
@@ -792,9 +802,9 @@ func (s *service) requestCheckSuite(
 ) error {
 	ghClient, err := ghlib.NewClient(
 		ctx,
-		s.config.GithubAppID,
+		app.AppID,
 		installationID,
-		[]byte(s.config.GithubAPIKey),
+		[]byte(app.APIKey),
 	)
 	if err != nil {
 		return errors.Wrapf(
@@ -804,6 +814,7 @@ func (s *service) requestCheckSuite(
 		)
 	}
 	// Find existing check suites for this commit
+	appID := int(app.AppID)
 	res, _, err := ghClient.Checks.ListCheckSuitesForRef(
 		ctx,
 		repoOwner,
@@ -811,7 +822,7 @@ func (s *service) requestCheckSuite(
 		commit,
 		&github.ListCheckSuiteOptions{
 			// Only list check suites for this appID
-			AppID: &s.config.GithubAppID,
+			AppID: &appID,
 		},
 	)
 	if err != nil {
