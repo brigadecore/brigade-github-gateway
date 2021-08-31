@@ -133,17 +133,17 @@ that prevents the gateway from using this token for impersonating other gateways
 
 For now, we're using the [GitHub Container Registry](https://ghcr.io) (which is
 an [OCI registry](https://helm.sh/docs/topics/registries/)) to host our Helm
-chart. Helm 3 has _experimental_ support for OCI registries. In the event that
-the Helm 3 dependency proves troublesome for Brigade users, or in the event that
+chart. Helm 3.7 has _experimental_ support for OCI registries. In the event that
+the Helm 3.7 dependency proves troublesome for Brigade users, or in the event that
 this experimental feature goes away, or isn't working like we'd hope, we will
 revisit this choice before going GA.
 
-To fetch the Brigade GitHub Gateway chart from the registry:
+First, be sure you are using
+[Helm 3.7.0-rc.1](https://github.com/helm/helm/releases/tag/v3.7.0-rc.1) and
+enable experimental OCI support:
 
 ```console
-  export HELM_EXPERIMENTAL_OCI=1
-  helm chart pull ghcr.io/brigadecore/brigade-github-gateway:v0.2.0
-  helm chart export ghcr.io/brigadecore/brigade-github-gateway:v0.2.0 -d ~/charts
+$ export HELM_EXPERIMENTAL_OCI=1
 ```
 
 As this chart requires custom configuration as described above to function
@@ -153,10 +153,11 @@ Use the following command to extract the full set of configuration options into
 a file you can modify:
 
 ```console
-$ helm inspect values ~/charts/brigade-github-gateway > my-values.yaml
+$ helm inspect values oci://ghcr.io/brigadecore/brigade-github-gateway \
+  --version v0.3.0 > ~/brigade-github-gateway-values.yaml
 ```
 
-Edit `my-values.yaml`, making the following changes:
+Edit `~/brigade-github-gateway-values.yaml`, making the following changes:
 
 * `brigade.apiAddress`: Address of the Brigade API server, beginning with
   `https://`
@@ -174,14 +175,16 @@ Edit `my-values.yaml`, making the following changes:
 
     * `sharedSecret`: Shared secret from step 1
 
-Save your changes to `my-values.yaml` and use the following command to install
-the gateway using the above customizations:
+Save your changes to `~/brigade-github-gateway-values.yaml` and use the
+following command to install the gateway using the above customizations:
 
 ```console
-$ helm install brigade-github-gateway ~/charts/brigade-github-gateway \
+$ helm install brigade-github-gateway \
+    oci://ghcr.io/brigadecore/brigade-github-gateway \
+    --version v0.3.0 \
     --create-namespace \
     --namespace brigade-github-gateway \
-    --values my-values.yaml
+    --values ~/brigade-github-gateway-values.yaml
 ```
 
 ### 4. (RECOMMENDED) Create a DNS Entry
