@@ -38,7 +38,7 @@ ifneq ($(SKIP_DOCKER),true)
 		-w /workspaces/brigade-github-gateway \
 		$(KANIKO_IMAGE)
 
-	HELM_IMAGE := brigadecore/helm-tools:v0.1.0
+	HELM_IMAGE := brigadecore/helm-tools:v0.2.0
 
 	HELM_DOCKER_CMD := docker run \
 	  -it \
@@ -157,10 +157,8 @@ publish-chart:
 		helm registry login $(HELM_REGISTRY) -u $(HELM_USERNAME) -p $${HELM_PASSWORD} && \
 		cd charts/brigade-github-gateway && \
 		helm dep up && \
-		sed -i "s/^version:.*/version: $(VERSION)/" Chart.yaml && \
-		sed -i "s/^appVersion:.*/appVersion: $(VERSION)/" Chart.yaml && \
-		helm chart save . $(HELM_CHART_PREFIX)brigade-github-gateway:$(VERSION) && \
-		helm chart push $(HELM_CHART_PREFIX)brigade-github-gateway:$(VERSION) \
+		helm package . --version $(VERSION) --app-version $(VERSION) && \
+		helm push brigade-github-gateway-$(VERSION).tgz oci://$(HELM_REGISTRY)$(HELM_ORG) \
 	'
 
 ################################################################################
