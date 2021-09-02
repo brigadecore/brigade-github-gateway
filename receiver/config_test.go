@@ -45,7 +45,7 @@ func TestAPIClientConfig(t *testing.T) {
 		{
 			name: "API_TOKEN not set",
 			setup: func() {
-				os.Setenv("API_ADDRESS", "foo")
+				t.Setenv("API_ADDRESS", "foo")
 			},
 			assertions: func(
 				_ string,
@@ -61,8 +61,8 @@ func TestAPIClientConfig(t *testing.T) {
 		{
 			name: "SUCCESS not set",
 			setup: func() {
-				os.Setenv("API_TOKEN", "bar")
-				os.Setenv("API_IGNORE_CERT_WARNINGS", "true")
+				t.Setenv("API_TOKEN", "bar")
+				t.Setenv("API_IGNORE_CERT_WARNINGS", "true")
 			},
 			assertions: func(
 				address string,
@@ -99,9 +99,6 @@ func TestWebHookServiceConfig(t *testing.T) {
 	}{
 		{
 			name: "GITHUB_APPS_PATH not set",
-			setup: func() {
-				os.Unsetenv("GITHUB_APPS_PATH")
-			},
 			assertions: func(_ webhooks.ServiceConfig, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "value not found for")
@@ -111,7 +108,7 @@ func TestWebHookServiceConfig(t *testing.T) {
 		{
 			name: "GITHUB_APPS_PATH path does not exist",
 			setup: func() {
-				os.Setenv("GITHUB_APPS_PATH", "/completely/bogus/path")
+				t.Setenv("GITHUB_APPS_PATH", "/completely/bogus/path")
 			},
 			assertions: func(_ webhooks.ServiceConfig, err error) {
 				require.Error(t, err)
@@ -130,7 +127,7 @@ func TestWebHookServiceConfig(t *testing.T) {
 				defer appsFile.Close()
 				_, err = appsFile.Write([]byte("this is not json"))
 				require.NoError(t, err)
-				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+				t.Setenv("GITHUB_APPS_PATH", appsFile.Name())
 			},
 			assertions: func(_ webhooks.ServiceConfig, err error) {
 				require.Error(t, err)
@@ -148,7 +145,7 @@ func TestWebHookServiceConfig(t *testing.T) {
 				_, err =
 					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
 				require.NoError(t, err)
-				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+				t.Setenv("GITHUB_APPS_PATH", appsFile.Name())
 			},
 			assertions: func(config webhooks.ServiceConfig, err error) {
 				require.NoError(t, err)
@@ -168,8 +165,8 @@ func TestWebHookServiceConfig(t *testing.T) {
 				_, err =
 					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
 				require.NoError(t, err)
-				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
-				os.Setenv("CHECK_SUITE_ALLOWED_AUTHOR_ASSOCIATIONS", "FOO,BAR")
+				t.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+				t.Setenv("CHECK_SUITE_ALLOWED_AUTHOR_ASSOCIATIONS", "FOO,BAR")
 			},
 			assertions: func(config webhooks.ServiceConfig, err error) {
 				require.NoError(t, err)
@@ -189,7 +186,7 @@ func TestWebHookServiceConfig(t *testing.T) {
 				_, err =
 					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
 				require.NoError(t, err)
-				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+				t.Setenv("GITHUB_APPS_PATH", appsFile.Name())
 			},
 			assertions: func(config webhooks.ServiceConfig, err error) {
 				require.NoError(t, err)
@@ -209,8 +206,8 @@ func TestWebHookServiceConfig(t *testing.T) {
 				_, err =
 					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
 				require.NoError(t, err)
-				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
-				os.Setenv("EMITTED_EVENTS", "foo,bar")
+				t.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+				t.Setenv("EMITTED_EVENTS", "foo,bar")
 			},
 			assertions: func(config webhooks.ServiceConfig, err error) {
 				require.NoError(t, err)
@@ -230,7 +227,7 @@ func TestWebHookServiceConfig(t *testing.T) {
 				_, err =
 					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
 				require.NoError(t, err)
-				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+				t.Setenv("GITHUB_APPS_PATH", appsFile.Name())
 			},
 			assertions: func(config webhooks.ServiceConfig, err error) {
 				require.NoError(t, err)
@@ -246,8 +243,8 @@ func TestWebHookServiceConfig(t *testing.T) {
 				_, err =
 					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
 				require.NoError(t, err)
-				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
-				os.Setenv("CHECK_SUITE_ON_PR", "i am not a bool")
+				t.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+				t.Setenv("CHECK_SUITE_ON_PR", "i am not a bool")
 			},
 			assertions: func(_ webhooks.ServiceConfig, err error) {
 				require.Error(t, err)
@@ -263,8 +260,8 @@ func TestWebHookServiceConfig(t *testing.T) {
 				_, err =
 					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
 				require.NoError(t, err)
-				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
-				os.Setenv("CHECK_SUITE_ON_PR", "false")
+				t.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+				t.Setenv("CHECK_SUITE_ON_PR", "false")
 			},
 			assertions: func(config webhooks.ServiceConfig, err error) {
 				require.NoError(t, err)
@@ -280,7 +277,7 @@ func TestWebHookServiceConfig(t *testing.T) {
 				_, err =
 					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
 				require.NoError(t, err)
-				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+				t.Setenv("GITHUB_APPS_PATH", appsFile.Name())
 			},
 			assertions: func(config webhooks.ServiceConfig, err error) {
 				require.NoError(t, err)
@@ -296,8 +293,8 @@ func TestWebHookServiceConfig(t *testing.T) {
 				_, err =
 					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
 				require.NoError(t, err)
-				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
-				os.Setenv("CHECK_SUITE_ON_COMMENT", "i am not a bool")
+				t.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+				t.Setenv("CHECK_SUITE_ON_COMMENT", "i am not a bool")
 			},
 			assertions: func(_ webhooks.ServiceConfig, err error) {
 				require.Error(t, err)
@@ -313,8 +310,8 @@ func TestWebHookServiceConfig(t *testing.T) {
 				_, err =
 					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
 				require.NoError(t, err)
-				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
-				os.Setenv("CHECK_SUITE_ON_COMMENT", "false")
+				t.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+				t.Setenv("CHECK_SUITE_ON_COMMENT", "false")
 			},
 			assertions: func(config webhooks.ServiceConfig, err error) {
 				require.NoError(t, err)
@@ -340,9 +337,6 @@ func TestSignatureVerificationFilterConfig(t *testing.T) {
 	}{
 		{
 			name: "GITHUB_APPS_PATH not set",
-			setup: func() {
-				os.Unsetenv("GITHUB_APPS_PATH")
-			},
 			assertions: func(
 				_ webhooks.SignatureVerificationFilterConfig,
 				err error,
@@ -355,7 +349,7 @@ func TestSignatureVerificationFilterConfig(t *testing.T) {
 		{
 			name: "GITHUB_APPS_PATH path does not exist",
 			setup: func() {
-				os.Setenv("GITHUB_APPS_PATH", "/completely/bogus/path")
+				t.Setenv("GITHUB_APPS_PATH", "/completely/bogus/path")
 			},
 			assertions: func(
 				_ webhooks.SignatureVerificationFilterConfig,
@@ -377,7 +371,7 @@ func TestSignatureVerificationFilterConfig(t *testing.T) {
 				defer appsFile.Close()
 				_, err = appsFile.Write([]byte("this is not json"))
 				require.NoError(t, err)
-				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+				t.Setenv("GITHUB_APPS_PATH", appsFile.Name())
 			},
 			assertions: func(
 				_ webhooks.SignatureVerificationFilterConfig,
@@ -398,7 +392,7 @@ func TestSignatureVerificationFilterConfig(t *testing.T) {
 				_, err =
 					appsFile.Write([]byte(`[{"appID":42,"sharedSecret":"foobar"}]`))
 				require.NoError(t, err)
-				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+				t.Setenv("GITHUB_APPS_PATH", appsFile.Name())
 			},
 			assertions: func(
 				config webhooks.SignatureVerificationFilterConfig,
@@ -431,7 +425,7 @@ func TestServerConfig(t *testing.T) {
 		{
 			name: "RECEIVER_PORT not an int",
 			setup: func() {
-				os.Setenv("RECEIVER_PORT", "foo")
+				t.Setenv("RECEIVER_PORT", "foo")
 			},
 			assertions: func(_ http.ServerConfig, err error) {
 				require.Error(t, err)
@@ -442,8 +436,8 @@ func TestServerConfig(t *testing.T) {
 		{
 			name: "TLS_ENABLED not a bool",
 			setup: func() {
-				os.Setenv("RECEIVER_PORT", "8080")
-				os.Setenv("TLS_ENABLED", "nope")
+				t.Setenv("RECEIVER_PORT", "8080")
+				t.Setenv("TLS_ENABLED", "nope")
 			},
 			assertions: func(_ http.ServerConfig, err error) {
 				require.Error(t, err)
@@ -454,7 +448,7 @@ func TestServerConfig(t *testing.T) {
 		{
 			name: "TLS_CERT_PATH required but not set",
 			setup: func() {
-				os.Setenv("TLS_ENABLED", "true")
+				t.Setenv("TLS_ENABLED", "true")
 			},
 			assertions: func(_ http.ServerConfig, err error) {
 				require.Error(t, err)
@@ -465,7 +459,7 @@ func TestServerConfig(t *testing.T) {
 		{
 			name: "TLS_KEY_PATH required but not set",
 			setup: func() {
-				os.Setenv("TLS_CERT_PATH", "/var/ssl/cert")
+				t.Setenv("TLS_CERT_PATH", "/var/ssl/cert")
 			},
 			assertions: func(_ http.ServerConfig, err error) {
 				require.Error(t, err)
@@ -476,7 +470,7 @@ func TestServerConfig(t *testing.T) {
 		{
 			name: "success",
 			setup: func() {
-				os.Setenv("TLS_KEY_PATH", "/var/ssl/key")
+				t.Setenv("TLS_KEY_PATH", "/var/ssl/key")
 			},
 			assertions: func(config http.ServerConfig, err error) {
 				require.NoError(t, err)

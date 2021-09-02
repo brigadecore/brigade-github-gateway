@@ -37,7 +37,7 @@ func TestAPIClientConfig(t *testing.T) {
 		{
 			name: "API_TOKEN not set",
 			setup: func() {
-				os.Setenv("API_ADDRESS", "foo")
+				t.Setenv("API_ADDRESS", "foo")
 			},
 			assertions: func(
 				_ string,
@@ -53,8 +53,8 @@ func TestAPIClientConfig(t *testing.T) {
 		{
 			name: "success",
 			setup: func() {
-				os.Setenv("API_TOKEN", "bar")
-				os.Setenv("API_IGNORE_CERT_WARNINGS", "true")
+				t.Setenv("API_TOKEN", "bar")
+				t.Setenv("API_IGNORE_CERT_WARNINGS", "true")
 			},
 			assertions: func(
 				address string,
@@ -102,7 +102,7 @@ func TestGetMonitorConfig(t *testing.T) {
 		{
 			name: "GITHUB_APPS_PATH path does not exist",
 			setup: func() {
-				os.Setenv("GITHUB_APPS_PATH", "/completely/bogus/path")
+				t.Setenv("GITHUB_APPS_PATH", "/completely/bogus/path")
 			},
 			assertions: func(_ monitorConfig, err error) {
 				require.Error(t, err)
@@ -121,7 +121,7 @@ func TestGetMonitorConfig(t *testing.T) {
 				defer appsFile.Close()
 				_, err = appsFile.Write([]byte("this is not json"))
 				require.NoError(t, err)
-				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+				t.Setenv("GITHUB_APPS_PATH", appsFile.Name())
 			},
 			assertions: func(_ monitorConfig, err error) {
 				require.Error(t, err)
@@ -139,8 +139,8 @@ func TestGetMonitorConfig(t *testing.T) {
 				_, err =
 					appsFile.Write([]byte(`[{"appID":42,"apiKey":"foobar"}]`))
 				require.NoError(t, err)
-				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
-				os.Setenv("LIST_EVENTS_INTERVAL", "foo")
+				t.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+				t.Setenv("LIST_EVENTS_INTERVAL", "foo")
 			},
 			assertions: func(cfg monitorConfig, err error) {
 				require.Error(t, err)
@@ -157,9 +157,9 @@ func TestGetMonitorConfig(t *testing.T) {
 				_, err =
 					appsFile.Write([]byte(`[{"appID":42,"apiKey":"foobar"}]`))
 				require.NoError(t, err)
-				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
-				os.Setenv("LIST_EVENTS_INTERVAL", "1m")
-				os.Setenv("EVENT_FOLLOW_UP_INTERVAL", "foo")
+				t.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+				t.Setenv("LIST_EVENTS_INTERVAL", "1m")
+				t.Setenv("EVENT_FOLLOW_UP_INTERVAL", "foo")
 			},
 			assertions: func(cfg monitorConfig, err error) {
 				require.Error(t, err)
@@ -176,8 +176,8 @@ func TestGetMonitorConfig(t *testing.T) {
 				_, err =
 					appsFile.Write([]byte(`[{"appID":42,"apiKey":"foobar"}]`))
 				require.NoError(t, err)
-				os.Setenv("GITHUB_APPS_PATH", appsFile.Name())
-				os.Setenv("EVENT_FOLLOW_UP_INTERVAL", "1m")
+				t.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+				t.Setenv("EVENT_FOLLOW_UP_INTERVAL", "1m")
 			},
 			assertions: func(cfg monitorConfig, err error) {
 				require.NoError(t, err)
