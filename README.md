@@ -1,5 +1,7 @@
 # Brigade Github Gateway
 
+[![codecov](https://codecov.io/gh/brigadecore/brigade-github-gateway/branch/main/graph/badge.svg?token=ZPY3OF13FC)](https://codecov.io/gh/brigadecore/brigade-github-gateway)
+
 This is a work-in-progress
 [Brigade 2](https://github.com/brigadecore/brigade/tree/v2)
 compatible gateway that can be used to receive events (webhooks) from one or
