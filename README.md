@@ -178,6 +178,9 @@ Edit `~/brigade-github-gateway-values.yaml`, making the following changes:
 
     * `sharedSecret`: Shared secret from step 1
 
+* `receiver.host`: Set this to the host name where you'd like the gateway to be
+  accessible.
+
 Save your changes to `~/brigade-github-gateway-values.yaml` and use the
 following command to install the gateway using the above customizations:
 
