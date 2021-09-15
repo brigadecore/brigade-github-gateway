@@ -1,5 +1,6 @@
 # Brigade Github Gateway
 
+![build](https://badgr.brigade2.io/v1/github/checks/brigadecore/brigade-github-gateway/badge.svg?appID=99005)
 [![codecov](https://codecov.io/gh/brigadecore/brigade-github-gateway/branch/main/graph/badge.svg?token=ZPY3OF13FC)](https://codecov.io/gh/brigadecore/brigade-github-gateway)
 [![Go Report Card](https://goreportcard.com/badge/github.com/brigadecore/brigade-github-gateway)](https://goreportcard.com/report/github.com/brigadecore/brigade-github-gateway)
 
