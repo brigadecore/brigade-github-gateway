@@ -158,7 +158,7 @@ a file you can modify:
 
 ```console
 $ helm inspect values oci://ghcr.io/brigadecore/brigade-github-gateway \
-  --version v0.3.0 > ~/brigade-github-gateway-values.yaml
+    --version v0.3.0 > ~/brigade-github-gateway-values.yaml
 ```
 
 Edit `~/brigade-github-gateway-values.yaml`, making the following changes:
@@ -178,6 +178,9 @@ Edit `~/brigade-github-gateway-values.yaml`, making the following changes:
       the beginning of each line should be indented exactly four spaces.
 
     * `sharedSecret`: Shared secret from step 1
+
+* `receiver.host`: Set this to the host name where you'd like the gateway to be
+  accessible.
 
 Save your changes to `~/brigade-github-gateway-values.yaml` and use the
 following command to install the gateway using the above customizations:
@@ -202,8 +205,8 @@ this command should help you find the gateway's public IP address:
 
 ```console
 $ kubectl get svc brigade-github-gateway-receiver \
-  --namespace brigade-github-gateway \
-  --output jsonpath='{.status.loadBalancer.ingress[0].ip}'
+    --namespace brigade-github-gateway \
+    --output jsonpath='{.status.loadBalancer.ingress[0].ip}'
 ```
 
 If you overrode defaults and enabled support for an ingress controller, you
