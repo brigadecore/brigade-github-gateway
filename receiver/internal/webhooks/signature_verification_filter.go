@@ -14,7 +14,7 @@ import (
 // SignatureVerificationFilterConfig encapsulates configuration for the
 // signature verification based auth filter.
 type SignatureVerificationFilterConfig struct {
-	// GitHubApps is a map of GitHup App configurations indexed by App ID.
+	// GitHubApps is a map of GitHub App configurations indexed by App ID.
 	GitHubApps map[int64]ghlib.App
 }
 
