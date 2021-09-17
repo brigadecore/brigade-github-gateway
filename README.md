@@ -14,7 +14,7 @@ and propagate them into Brigade 2's event bus.
 
 The installation for this gateway is multi-part, and not particularly easy, at
 least in part because of a potential "chicken and egg" problem. Setting up this
-gateway requires a value obtained during the creation of a GitHup App. Setting
+gateway requires a value obtained during the creation of a GitHub App. Setting
 up the GitHub App _may_ require the gateway's public IP (if you're not using a
 domain or subdomain name instead). We will use an approach of setting up the
 GitHub App first, with a placeholder value for the gateway's address, if
