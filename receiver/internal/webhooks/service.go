@@ -22,7 +22,7 @@ var (
 // ServiceConfig encapsulates configuration options for webhook-handling
 // service.
 type ServiceConfig struct {
-	// GitHubApps is a map of GitHup App configurations indexed by App ID.
+	// GitHubApps is a map of GitHub App configurations indexed by App ID.
 	GitHubApps map[int64]ghlib.App
 	// CheckSuiteAllowedAuthorAssociations enumerates the author associations who
 	// are allowed to have their PR events and "/brig check" or "/brig run"
