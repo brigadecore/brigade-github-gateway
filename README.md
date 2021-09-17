@@ -4,11 +4,15 @@
 [![codecov](https://codecov.io/gh/brigadecore/brigade-github-gateway/branch/main/graph/badge.svg?token=ZPY3OF13FC)](https://codecov.io/gh/brigadecore/brigade-github-gateway)
 [![Go Report Card](https://goreportcard.com/badge/github.com/brigadecore/brigade-github-gateway)](https://goreportcard.com/report/github.com/brigadecore/brigade-github-gateway)
 
+<img width="100" align="left" src="logo.png">
+
 This is a work-in-progress
 [Brigade 2](https://github.com/brigadecore/brigade/tree/v2)
 compatible gateway that can be used to receive events (webhooks) from one or
 more [GitHub Apps](https://docs.github.com/en/developers/apps/about-apps)
 and propagate them into Brigade 2's event bus.
+
+<br clear="left"/>
 
 ## Installation
 
