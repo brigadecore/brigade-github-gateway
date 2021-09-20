@@ -4,17 +4,21 @@
 [![codecov](https://codecov.io/gh/brigadecore/brigade-github-gateway/branch/main/graph/badge.svg?token=ZPY3OF13FC)](https://codecov.io/gh/brigadecore/brigade-github-gateway)
 [![Go Report Card](https://goreportcard.com/badge/github.com/brigadecore/brigade-github-gateway)](https://goreportcard.com/report/github.com/brigadecore/brigade-github-gateway)
 
+<img width="100" align="left" src="logo.png">
+
 This is a work-in-progress
 [Brigade 2](https://github.com/brigadecore/brigade/tree/v2)
 compatible gateway that can be used to receive events (webhooks) from one or
 more [GitHub Apps](https://docs.github.com/en/developers/apps/about-apps)
 and propagate them into Brigade 2's event bus.
 
+<br clear="left"/>
+
 ## Installation
 
 The installation for this gateway is multi-part, and not particularly easy, at
 least in part because of a potential "chicken and egg" problem. Setting up this
-gateway requires a value obtained during the creation of a GitHup App. Setting
+gateway requires a value obtained during the creation of a GitHub App. Setting
 up the GitHub App _may_ require the gateway's public IP (if you're not using a
 domain or subdomain name instead). We will use an approach of setting up the
 GitHub App first, with a placeholder value for the gateway's address, if
@@ -34,8 +38,8 @@ Prerequisites:
       mess with port forwarding settings on your router, which we won't be
       covering here.)
 
-* `kubectl`, `helm` (commands below assume Helm 3), and `brig` (the Brigade 2
-  CLI)
+* `kubectl`, `helm` (commands below assume Helm 3.7.0+), and `brig` (the Brigade
+  2 CLI)
 
 If you want to avoid the aforementioned "chicken and egg" problem, reserving a
 domain or subdomain name (for which you control DNS) also helps. If you don't
@@ -143,7 +147,7 @@ this experimental feature goes away, or isn't working like we'd hope, we will
 revisit this choice before going GA.
 
 First, be sure you are using
-[Helm 3.7.0-rc.1](https://github.com/helm/helm/releases/tag/v3.7.0-rc.1) and
+[Helm 3.7.0](https://github.com/helm/helm/releases/tag/v3.7.0) or greater and
 enable experimental OCI support:
 
 ```console
