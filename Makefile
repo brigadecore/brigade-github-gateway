@@ -191,14 +191,18 @@ hack-push-%: hack-build-%
 
 .PHONY: hack
 hack: hack-push-images
-	kubectl get namespace brigade-github-gateway || kubectl create namespace brigade-github-gateway
+ifndef BRIGADE_API_TOKEN
+	@echo "BRIGADE_API_TOKEN must be defined" && false
+endif
 	helm dep up charts/brigade-github-gateway && \
 	helm upgrade brigade-github-gateway charts/brigade-github-gateway \
 		--install \
 		--namespace brigade-github-gateway \
+		--create-namespace \
 		--set receiver.image.repository=$(DOCKER_IMAGE_PREFIX)receiver \
 		--set receiver.image.tag=$(IMMUTABLE_DOCKER_TAG) \
 		--set receiver.image.pullPolicy=Always \
 		--set monitor.image.repository=$(DOCKER_IMAGE_PREFIX)monitor \
 		--set monitor.image.tag=$(IMMUTABLE_DOCKER_TAG) \
-		--set monitor.image.pullPolicy=Always
+		--set monitor.image.pullPolicy=Always \
+		--set brigade.apiToken=$(BRIGADE_API_TOKEN)
