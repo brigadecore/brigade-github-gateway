@@ -130,7 +130,7 @@ events.on("brigade.sh/github", "check_suite:rerequested", runSuite)
 
 // This event indicates a specific job is to be re-run.
 events.on("brigade.sh/github", "check_run:rerequested", async event => {
-  const jobName = JSON.parse(event.payload).check_run.name
+  const jobName = JSON.parse(event.payload).check_run.name.slice(event.project.id.length + 1)
   const job = jobs[jobName]
   if (job) {
     await job(event).run()
