@@ -25,7 +25,7 @@ func TestNewSignatureVerificationFilter(t *testing.T) {
 			},
 		},
 	}
-	filter :=
+	filter := // nolint: forcetypeassert
 		NewSignatureVerificationFilter(testConfig).(*signatureVerificationFilter)
 	require.Equal(t, testConfig, filter.config)
 }
