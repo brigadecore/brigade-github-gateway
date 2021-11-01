@@ -99,7 +99,7 @@ func createJWT(appID int64, keyPEM []byte) (string, error) {
 		jwt.StandardClaims{
 			IssuedAt:  now.Unix(),
 			ExpiresAt: now.Add(5 * time.Minute).Unix(),
-			Issuer:    strconv.FormatInt(int64(appID), 10),
+			Issuer:    strconv.FormatInt(appID, 10),
 		},
 	).SignedString(key)
 }

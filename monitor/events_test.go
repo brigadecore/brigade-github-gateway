@@ -376,7 +376,7 @@ func TestMonitorEventInternal(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		t.Run(string(testCase.name), func(t *testing.T) {
+		t.Run(testCase.name, func(t *testing.T) {
 			err := testCase.monitor.monitorEventInternal(
 				context.Background(),
 				testEventID,
@@ -515,7 +515,7 @@ func TestCreateCheckRun(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		t.Run(string(testCase.name), func(t *testing.T) {
+		t.Run(testCase.name, func(t *testing.T) {
 			checkRunID, err := testCase.monitor.createCheckRun(
 				context.Background(),
 				testApp,
@@ -659,7 +659,7 @@ func TestUpdateCheckRun(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		t.Run(string(testCase.name), func(t *testing.T) {
+		t.Run(testCase.name, func(t *testing.T) {
 			err := testCase.monitor.updateCheckRun(
 				context.Background(),
 				testApp,
