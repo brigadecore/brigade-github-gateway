@@ -25,8 +25,9 @@ func TestNewSignatureVerificationFilter(t *testing.T) {
 			},
 		},
 	}
-	filter := // nolint: forcetypeassert
+	filter, ok :=
 		NewSignatureVerificationFilter(testConfig).(*signatureVerificationFilter)
+	require.True(t, ok)
 	require.Equal(t, testConfig, filter.config)
 }
 
@@ -46,7 +47,7 @@ func TestSignatureVerificationFilter(t *testing.T) {
 	testCases := []struct {
 		name       string
 		setup      func() *http.Request
-		assertions func(handlerCalled bool, rr *httptest.ResponseRecorder)
+		assertions func(handlerCalled bool, r *http.Response)
 	}{
 		{
 			name: "app ID header absent",
@@ -57,8 +58,8 @@ func TestSignatureVerificationFilter(t *testing.T) {
 				require.NoError(t, err)
 				return req
 			},
-			assertions: func(handlerCalled bool, rr *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusForbidden, rr.Code)
+			assertions: func(handlerCalled bool, r *http.Response) {
+				require.Equal(t, http.StatusForbidden, r.StatusCode)
 				require.False(t, handlerCalled)
 			},
 		},
@@ -73,8 +74,8 @@ func TestSignatureVerificationFilter(t *testing.T) {
 				req.Header.Add("X-GitHub-Hook-Installation-Target-ID", "foo")
 				return req
 			},
-			assertions: func(handlerCalled bool, rr *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusForbidden, rr.Code)
+			assertions: func(handlerCalled bool, r *http.Response) {
+				require.Equal(t, http.StatusForbidden, r.StatusCode)
 				require.False(t, handlerCalled)
 			},
 		},
@@ -94,8 +95,8 @@ func TestSignatureVerificationFilter(t *testing.T) {
 				req.Header.Add("X-Hub-Signature", "johnhancock")
 				return req
 			},
-			assertions: func(handlerCalled bool, rr *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusForbidden, rr.Code)
+			assertions: func(handlerCalled bool, r *http.Response) {
+				require.Equal(t, http.StatusForbidden, r.StatusCode)
 				require.False(t, handlerCalled)
 			},
 		},
@@ -122,8 +123,8 @@ func TestSignatureVerificationFilter(t *testing.T) {
 				)
 				return req
 			},
-			assertions: func(handlerCalled bool, rr *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusOK, rr.Code)
+			assertions: func(handlerCalled bool, r *http.Response) {
+				require.Equal(t, http.StatusOK, r.StatusCode)
 				require.True(t, handlerCalled)
 			},
 		},
@@ -137,7 +138,9 @@ func TestSignatureVerificationFilter(t *testing.T) {
 				handlerCalled = true
 				w.WriteHeader(http.StatusOK)
 			})(rr, req)
-			testCase.assertions(handlerCalled, rr)
+			res := rr.Result()
+			defer res.Body.Close()
+			testCase.assertions(handlerCalled, res)
 		})
 	}
 }

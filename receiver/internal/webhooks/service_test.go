@@ -13,7 +13,7 @@ import (
 )
 
 func TestNewService(t *testing.T) {
-	s := NewService( // nolint: forcetypeassert
+	s, ok := NewService(
 		// Totally unusable client that is enough to fulfill the dependencies for
 		// this test...
 		&coreTesting.MockEventsClient{
@@ -21,6 +21,7 @@ func TestNewService(t *testing.T) {
 		},
 		ServiceConfig{},
 	).(*service)
+	require.True(t, ok)
 	require.NotNil(t, s.eventsClient)
 	require.NotNil(t, s.config)
 }
