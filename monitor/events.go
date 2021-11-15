@@ -25,6 +25,7 @@ const (
 	conclusionCanceled = "cancelled" // This is how GitHub spells it
 	conclusionFailure  = "failure"
 	conclusionSuccess  = "success"
+	conclusionTimedOut = "timed_out"
 )
 
 func (m *monitor) manageEvents(ctx context.Context) {
@@ -418,6 +419,9 @@ func checkRunStatusAndConclusionFromJobStatus(
 	case core.JobPhaseSucceeded:
 		status = statusCompleted
 		conclusion = conclusionSuccess
+	case core.JobPhaseTimedOut:
+		status = statusCompleted
+		conclusion = conclusionTimedOut
 	}
 	return status, conclusion
 }
