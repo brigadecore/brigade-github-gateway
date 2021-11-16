@@ -729,6 +729,11 @@ func TestCheckRunStatusAndConclusionFromJobStatus(t *testing.T) {
 			expectedStatus:     statusCompleted,
 			expectedConclusion: conclusionSuccess,
 		},
+		{
+			jobPhase:           core.JobPhaseTimedOut,
+			expectedStatus:     statusCompleted,
+			expectedConclusion: conclusionTimedOut,
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(string(testCase.jobPhase), func(t *testing.T) {
