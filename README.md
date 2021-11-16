@@ -187,6 +187,10 @@ Edit `~/brigade-github-gateway-values.yaml`, making the following changes:
 * `receiver.host`: Set this to the host name where you'd like the gateway to be
   accessible.
 
+* `receiver.service.type`: If you plan to enable ingress (advanced), you can
+  leave this as its default -- `ClusterIP`. If you do not plan to enable
+  ingress, you probably will want to change this value to `LoadBalancer`.
+
 Save your changes to `~/brigade-github-gateway-values.yaml` and use the
 following command to install the gateway using the above customizations:
 
@@ -196,7 +200,9 @@ $ helm install brigade-github-gateway \
     --version v0.3.0 \
     --create-namespace \
     --namespace brigade-github-gateway \
-    --values ~/brigade-github-gateway-values.yaml
+    --values ~/brigade-github-gateway-values.yaml \
+    --wait \
+    --timeout 300s
 ```
 
 ### 4. (RECOMMENDED) Create a DNS Entry
@@ -205,8 +211,8 @@ In the prerequisites section, we suggested that you reserve a domain or
 subdomain name as the address of your gateway. At this point, you should be able
 to associate that name with the gateway's public IP address.
 
-If you installed the gateway without enabling support for an ingress controller,
-this command should help you find the gateway's public IP address:
+If you overrode defaults and set `service.type` to `LoadBalancer`, use this
+command to find the gateway's public IP address:
 
 ```console
 $ kubectl get svc brigade-github-gateway-receiver \
