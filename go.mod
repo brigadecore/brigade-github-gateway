@@ -7,7 +7,7 @@ replace k8s.io/client-go => k8s.io/client-go v0.18.2
 require (
 	github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2
 	github.com/brigadecore/brigade-foundations v0.2.0
-	github.com/brigadecore/brigade/sdk/v2 v2.0.0-beta.1
+	github.com/brigadecore/brigade/sdk/v2 v2.0.0-rc.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/google/go-github/v33 v33.0.0
 	github.com/gorilla/mux v1.8.0
