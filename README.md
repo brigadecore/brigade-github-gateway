@@ -163,7 +163,7 @@ a file you can modify:
 
 ```console
 $ helm inspect values oci://ghcr.io/brigadecore/brigade-github-gateway \
-    --version v0.3.0 > ~/brigade-github-gateway-values.yaml
+    --version v0.4.0 > ~/brigade-github-gateway-values.yaml
 ```
 
 Edit `~/brigade-github-gateway-values.yaml`, making the following changes:
@@ -197,7 +197,7 @@ following command to install the gateway using the above customizations:
 ```console
 $ helm install brigade-github-gateway \
     oci://ghcr.io/brigadecore/brigade-github-gateway \
-    --version v0.3.0 \
+    --version v0.4.0 \
     --create-namespace \
     --namespace brigade-github-gateway \
     --values ~/brigade-github-gateway-values.yaml \
