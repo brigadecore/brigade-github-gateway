@@ -182,8 +182,8 @@ hack-push-%: hack-build-%
 	docker push $(DOCKER_IMAGE_PREFIX)$*:$(IMMUTABLE_DOCKER_TAG)
 	docker push $(DOCKER_IMAGE_PREFIX)$*:$(MUTABLE_DOCKER_TAG)
 
-.PHONY: hack
-hack: hack-push-images
+.PHONY: hack-deploy
+hack-deploy:
 ifndef BRIGADE_API_TOKEN
 	@echo "BRIGADE_API_TOKEN must be defined" && false
 endif
@@ -199,3 +199,6 @@ endif
 		--set monitor.image.tag=$(IMMUTABLE_DOCKER_TAG) \
 		--set monitor.image.pullPolicy=Always \
 		--set brigade.apiToken=$(BRIGADE_API_TOKEN)
+
+.PHONY: hack
+hack: hack-push-images hack-deploy
