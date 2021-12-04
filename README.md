@@ -369,7 +369,7 @@ status and view logs produced in the course of handling the event.
 Events received by this gateway from GitHub are, in turn, emitted into
 Brigade's event bus.
 
-Event of certain types received from GitHub are further qualified by the value
+Events of certain types received from GitHub are further qualified by the value
 of an `action` field. In all such cases, the event emitted into Brigade's event
 bus will have a type of the form `<original event type>:<action>`. For instance,
 if this gateway receives an event of type `pull_request` from GitHub with the
@@ -424,10 +424,259 @@ event bus.
 | [`team_add`](https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#team_add) | specific repository || <ul><li>`team_add`</li></ul>
 | [`watch`](https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#watch) | specific repository | <ul><li>`started`</li></ul> | <ul><li>`watch:started`</li></ul>
 
-## Examples Projects
+## Scripting Guide
 
-See `examples/` for complete Brigade projects that demonstrate various
-scenarios.
+In this section, we'll explore a popular use case for this gateway -- CI/CD.
+
+### Overview
+
+When implementing CI/CD, the GitHub
+[checks API](https://docs.github.com/en/rest/reference/checks) is of particular
+significance. A _check_ is some assertion that can be made upon a
+code base. Examples would include executing a battery of unit tests or
+subjecting code to some kind of static analysis such as linting rules. A _check
+suite_, as one can infer from the name, is a _collection_ of checks.
+
+Provided you subscribed your gateway to them when you set up the corresponding
+GitHub App, GitHub will forward a `check_suite` webhook with action `requested`
+to your gateway anytime new commits are pushed _directly_ to an applicable
+repository. This intuitively makes good sense. _When GitHub becomes aware of new
+code, it requests that code be validated._
+
+Often, however, workflows involve pull requests wherein the source branch
+belongs to a _fork_ since most projects, rightfully, do not permit
+non-maintainers to push branches or tags directly to their repository. For such
+cases, no `check_suite` web hook is forwarded from GitHub to your gateway. There
+is sound rationale for this. If a contributor lacks adequate permissions to push
+code directly to a given repository, then it follows that their contributions
+can not be implicitly trusted to an extent that they can safely be tested
+automatically -- since malicious modifications to the code or tests could put a
+software project at risk. (For instance, imagine if any random person on the
+internet could hijack your CI processes to steal project secrets or mine crypto
+coins.)
+
+So, generally speaking, PRs do _not_ automatically result in `check_suite` web
+hooks being forwarded to your gateway. In such cases, however, provided you
+subscribed when setting up the GitHub App, of course, `pull_request` web hooks
+_are_ forwarded.
+
+By default, the GitHub gateway _intercepts_ `pull_request` web hooks with
+actions `opened`, `reopened`, or `synchronized` and scrutinizes the PR author's
+relationship to the target repository. If the author is determined to be a
+trusted contributor, the gateway uses the checks API to explicitly ask GitHub to
+forward a corresponding `check_suite` webhook with action `rerequested`. If the
+author is determined _not_ to be a trusted contributor, then this does _not_
+happen. In such cases, a trusted contributor may review the PR and, if they deem
+it safe, can comment `/brig run`. This results in an `issue_comment` webhook
+being sent to the gateway. These also are intercepted and if/when the
+commentor's status as a trusted contributor is verified, the gateway utilizes
+the checks API to to explicitly ask GitHub to forward a corresponding
+`check_suite` webhook with action `rerequested` -- just the same as if the
+reviewer had authored the PR themselves.
+
+In any case where the gateway forwards a `check_suite:rerequested` event to
+Brigade to be enqueued for any subscribed project, the gateway will also monitor
+the status of any and all jobs associated with each event and utilize the checks
+API to return test results to GitHub. In this way, the result of every job
+becomes the result of a single check (having the same name as the job) in the
+corresponding check suite. (This is how job results end up visible in the GitHub
+web UI.)
+
+In the event that any individual check in the suite fails, it can be
+re-requested by an authorized user via GitHub's web UI. This results in a web
+hook of type `check_run` with action `rerequested` being forwarded to the
+gateway.
+
+__If all of the above is confusing, do not dismay.__ While the GitHub checks API
+is complex and this gateway's interaction with it is rife with technical
+nuances, the bottom line is quite simple: If you are interested in implementing
+CI/CD using Brigade and this gateway, your Brigade projects should subscribe to
+the following events:
+
+* `check_suite:rerequested`: This is a reliable indicator that a PR has been
+  opened or updated, the gateway has intercepted that event and determined it is
+  safe to test, _or_ a maintainer has made that determination and requested for
+  tests to proceed by commenting `/brig run`.
+* `check_suite:requested`: This is a reliable indicator that new code has been
+  pushed directly to the repository or a PR has been merged into its target
+  branch.
+* `check_run:rerequested`: This is a reliable indicator that an authorized
+  user has requested a specific check (i.e. job) to be re-run.
+* `push`: This is a reliable indicator that new code has been pushed directly to
+  the repository, a PR has been merged into its target branch, _or a new tag has
+  been pushed to the repository_. It is this last condition that we will
+  generally be concerned with since the other conditions _also_ result in
+  `check_run:rerequested` or `check_run:requested` events.
+
+A project definition that is subscribed to all of the above may then resemble
+this one:
+
+```yaml
+apiVersion: brigade.sh/v2
+description: A CI/CD example
+kind: Project
+metadata:
+  id: ci-cd-example
+spec:
+  eventSubscriptions:
+  - source: brigade.sh/github
+    qualifiers:
+      repo: brigadecore/ci-cd-example
+    types:
+    - check_run:rerequested
+    - check_suite:requested
+    - check_suite:rerequested
+    - push
+  workerTemplate:
+    git:
+      cloneURL: https://github.com/brigadecore/ci-cd-example.git
+```
+
+### Responding with Script
+
+If you've used a project definition similar to the one in the previous section,
+the events discussed in that section will trigger a worker that will execute
+your script. It is still up to your script to distinguish between different
+scenarios and handle them accordingly. The following TypeScript (`brigade.ts`)
+demonstrates a common pattern. Of course, you can use this as a starting point
+and adapt it to suit your needs:
+
+```typescript
+import { events, Event, Job, ConcurrentGroup, Container } from "@brigadecore/brigadier"
+
+async function runSuite(event: Event): Promise<void> {
+  // Chain some jobs together to implement CI. For example:
+  await new ConcurrentGroup(
+    // For brevity, we're omitting the definitions of each job.
+    testJob0,
+    testJob1,
+    // ...,
+    testJobN
+  ).run()
+}
+
+// Either of these events should initiate execution of the entire test suite,
+// so we've broken that test suite out into a reusable function.
+events.on("brigade.sh/github", "check_suite:requested", runSuite)
+events.on("brigade.sh/github", "check_suite:rerequested", runSuite)
+
+// Pushing (or merging) commits to any branch in github triggers a check suite.
+// Such events are already handled above. So here, we're ONLY concerned with the
+// case wherein a new TAG has been pushed. In this example at least, we're only
+// concerned with tags that honor semantic versioning and therefore indicate
+// a RELEASE.
+events.on("brigade.sh/github", "push", async event => {
+  const releaseTagRegex = /^refs\/tags\/(v[0-9]+(?:\.[0-9]+)*(?:\-.+)?)$/
+  const matchStr = event.worker.git.ref.match(releaseTagRegex)
+  if (matchStr) {
+    // Chain some jobs together to implement CD. For example:
+    await new ConcurrentGroup(
+      // For brevity, we're omitting the definitions of each job.
+      releaseJob0,
+      releaseJob1,
+      // ...,
+      releaseJobN,
+    ).run()
+  } else {
+    console.log(`Ref ${event.worker.git.ref} does not match release tag regex (${releaseTagRegex}); nothing to run.`)
+  } 
+}
+
+// Dispatch the event
+events.process()
+```
+
+Unaccounted for in the script above are `check_run:rerequested` events that
+indicate that a specific check (i.e. a specific job), should be re-run.
+Modifying the previous script slightly, we can account for such events. The
+strategy makes us of a map of job factory functions indexed by name:
+
+```typescript
+import { events, Event, Job, ConcurrentGroup, Container } from "@brigadecore/brigadier"
+
+// A map of job factory functions indexed by name. When a check_run:rerequested
+// event wants to re-run a single job, this allows us to easily accommodate
+// that.
+const jobs: {[key: string]: (event: Event) => Job } = {}
+
+const testJob0Name = "testJob0"
+const testJob0 = (event: Event) => {
+  return new Job(testJob0Name, "some/image:tag", event)
+}
+jobs[testJob0Name] = testJob0
+
+// Remaining job factory function definitions are omitted for brevity
+
+// ...
+
+async function runSuite(event: Event): Promise<void> {
+  // Chain some jobs together to implement CI. For example:
+  await new ConcurrentGroup(
+    testJob0(event),
+    testJob1(event),
+    // ...,
+    testJobN(event)
+  ).run()
+}
+
+// Either of these events should initiate execution of the entire test suite,
+// so we've broken that test suite out into a reusable function.
+events.on("brigade.sh/github", "check_suite:requested", runSuite)
+events.on("brigade.sh/github", "check_suite:rerequested", runSuite)
+
+// This event indicates a specific job is to be re-run.
+events.on("brigade.sh/github", "check_run:rerequested", async event => {
+  // Check run names are of the form <project name>:<job name>, so we strip
+  // event.project.id.length + 1 characters off the start of the check run name
+  // to find the job name.
+  const jobName = JSON.parse(event.payload).check_run.name.slice(event.project.id.length + 1)
+  const job = jobs[jobName]
+  if (job) {
+    await job(event).run()
+    return
+  }
+  throw new Error(`No job found with name: ${jobName}`)
+})
+
+// Pushing (or merging) commits to any branch in github triggers a check suite.
+// Such events are already handled above. So here, we're ONLY concerned with the
+// case wherein a new TAG has been pushed. In this example at least, we're only
+// concerned with tags that honor semantic versioning and therefore indicate
+// a RELEASE.
+events.on("brigade.sh/github", "push", async event => {
+  const releaseTagRegex = /^refs\/tags\/(v[0-9]+(?:\.[0-9]+)*(?:\-.+)?)$/
+  const matchStr = event.worker.git.ref.match(releaseTagRegex)
+  if (matchStr) {
+    // Chain some jobs together to implement CD. For example:
+    await new ConcurrentGroup(
+      releaseJob0(event),
+      releaseJob1(event),
+      // ...,
+      releaseJobN(event),
+    ).run()
+  } else {
+    console.log(`Ref ${event.worker.git.ref} does not match release tag regex (${releaseTagRegex}); nothing to run.`)
+  } 
+}
+
+// Dispatch the event
+events.process()
+```
+
+### Simplifying
+
+While the project maintainers readily acknowledge that the CI/CD implementation
+pattern demonstrated across the previous two sections is complex, it is, at the
+very least tried and true. The maintainers have applied this pattern to Brigade
+itself, this gateway, and dozens of other Brigade-related projects. Still, we
+know improvement is possible.
+
+Plans are already underway to distill this pattern into something more succinct
+and more readily reusable. Expect to see such a solution included very soon in a
+minor release.
+
+For reference, please refer to
+[this issue](https://github.com/brigadecore/brigade-github-gateway/issues/4).
 
 ## Contributing
 
