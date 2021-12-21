@@ -349,7 +349,7 @@ func (s *service) Handle(
 		// 3. Requesting a check suite in response to a comment is enabled
 		// 4. The comment's author is allowed to request a check suite
 		comment := strings.ToLower(e.GetComment().GetBody())
-		if e.GetIssue().IsPullRequest() &&
+		if e.GetIssue().IsPullRequest() && e.GetAction() == "created" &&
 			(strings.Contains(comment, "/brig check") || strings.Contains(comment, "/brig run")) && // nolint: lll
 			s.config.CheckSuiteOnComment &&
 			s.isAllowedAuthorAssociation(e.GetComment().GetAuthorAssociation()) {
