@@ -1338,7 +1338,6 @@ func TestHandle(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.service.config.EmittedEvents = []string{"*"}
 			events, err := testCase.service.Handle(
 				context.Background(),
 				42, // Just a fake app ID
@@ -1385,54 +1384,6 @@ func TestIsAllowedAuthorAssociation(t *testing.T) {
 				t,
 				testCase.expectedResult,
 				s.isAllowedAuthorAssociation(testCase.association),
-			)
-		})
-	}
-}
-
-func TestShouldEmit(t *testing.T) {
-	testCases := []struct {
-		name              string
-		allowedEventTypes []string
-		eventType         string
-		expectedResult    bool
-	}{
-		{
-			name:              "not allowed",
-			allowedEventTypes: []string{"pull_request:opened"},
-			eventType:         "pull_request:closed",
-			expectedResult:    false,
-		},
-		{
-			name:              "exact match",
-			allowedEventTypes: []string{"pull_request:opened"},
-			eventType:         "pull_request:opened",
-			expectedResult:    true,
-		},
-		{
-			name:              "match on unqualified type",
-			allowedEventTypes: []string{"pull_request"},
-			eventType:         "pull_request:opened",
-			expectedResult:    true,
-		},
-		{
-			name:              "wildcard match",
-			allowedEventTypes: []string{"*"},
-			eventType:         "pull_request:opened",
-			expectedResult:    true,
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			s := &service{
-				config: ServiceConfig{
-					EmittedEvents: testCase.allowedEventTypes,
-				},
-			}
-			require.Equal(
-				t,
-				testCase.expectedResult,
-				s.shouldEmit(testCase.eventType),
 			)
 		})
 	}

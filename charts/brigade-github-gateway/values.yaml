@@ -74,12 +74,6 @@ receiver:
       - OWNER
       - MEMBER
       - COLLABORATOR
-      ## Whether a new GitHub CheckSuite should be created when an authorized
-      ## user (see above) opens or amends a PR.
-      onPR: true
-      ## Whether a new GitHub CheckSuite should be created when an authorized
-      ## user (see above) comments "/brig check" or "/brig run" on a PR.
-      onComment: true
 
   brigade:
     ## The opt-in list of upstream event types that may be emitted into Brigade.
