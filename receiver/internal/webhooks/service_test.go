@@ -3,7 +3,6 @@ package webhooks
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"testing"
 
 	"github.com/brigadecore/brigade/sdk/v2/core"
@@ -175,6 +174,7 @@ func TestHandle(t *testing.T) {
 				event := events.Items[0]
 				require.Equal(t, "foo", event.ProjectID)
 				require.Equal(t, "check_run:rerequested", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
 					core.GitDetails{
@@ -222,6 +222,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "check_suite:requested", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
 					core.GitDetails{
@@ -265,6 +266,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "create", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
 					core.GitDetails{
@@ -306,6 +308,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "delete", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Nil(t, event.Git)
 			},
 		},
@@ -341,6 +344,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "fork", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Nil(t, event.Git)
 			},
 		},
@@ -400,6 +404,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "gollum", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Nil(t, event.Git)
 			},
 		},
@@ -413,6 +418,9 @@ func TestHandle(t *testing.T) {
 						Action: testGenericAction,
 						Repositories: []*github.Repository{
 							{
+								FullName: github.String("brigadecore/brigade"),
+							},
+							{
 								FullName: github.String("brigadecore/brigade-github-gateway"),
 							},
 						},
@@ -437,43 +445,21 @@ func TestHandle(t *testing.T) {
 			},
 			assertions: func(events core.EventList, err error) {
 				require.NoError(t, err)
-				require.Len(t, events.Items, 1)
+				require.Len(t, events.Items, 2)
 				event := events.Items[0]
 				require.Equal(t, "installation:foo", event.Type)
-				require.Nil(t, event.Git)
-			},
-		},
-
-		{
-			name:        "installation webhook; create fails",
-			webhookType: "installation",
-			webhookBytes: func() []byte {
-				bytes, err := json.Marshal(
-					&github.InstallationEvent{
-						Repositories: []*github.Repository{
-							{
-								FullName: github.String("brigadecore/brigade-github-gateway"),
-							},
-						},
+				require.Equal(
+					t,
+					map[string]string{
+						"repo": "brigadecore/brigade",
 					},
+					event.Qualifiers,
 				)
-				require.NoError(t, err)
-				return bytes
-			},
-			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
-					CreateFn: func(
-						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{}, errors.New("something went wrong")
-					},
-				},
-			},
-			assertions: func(events core.EventList, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error emitting event(s) into Brigade")
+				require.Nil(t, event.Git)
+				event = events.Items[1]
+				require.Equal(t, "installation:foo", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
+				require.Nil(t, event.Git)
 			},
 		},
 
@@ -486,6 +472,9 @@ func TestHandle(t *testing.T) {
 						Action: github.String("added"),
 						RepositoriesAdded: []*github.Repository{
 							{
+								FullName: github.String("brigadecore/brigade"),
+							},
+							{
 								FullName: github.String("brigadecore/brigade-github-gateway"),
 							},
 						},
@@ -510,9 +499,20 @@ func TestHandle(t *testing.T) {
 			},
 			assertions: func(events core.EventList, err error) {
 				require.NoError(t, err)
-				require.Len(t, events.Items, 1)
+				require.Len(t, events.Items, 2)
 				event := events.Items[0]
 				require.Equal(t, "installation_repositories:added", event.Type)
+				require.Equal(
+					t,
+					map[string]string{
+						"repo": "brigadecore/brigade",
+					},
+					event.Qualifiers,
+				)
+				require.Nil(t, event.Git)
+				event = events.Items[1]
+				require.Equal(t, "installation_repositories:added", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Nil(t, event.Git)
 			},
 		},
@@ -526,6 +526,9 @@ func TestHandle(t *testing.T) {
 						Action: github.String("removed"),
 						RepositoriesRemoved: []*github.Repository{
 							{
+								FullName: github.String("brigadecore/brigade"),
+							},
+							{
 								FullName: github.String("brigadecore/brigade-github-gateway"),
 							},
 						},
@@ -550,40 +553,21 @@ func TestHandle(t *testing.T) {
 			},
 			assertions: func(events core.EventList, err error) {
 				require.NoError(t, err)
-				require.Len(t, events.Items, 1)
+				require.Len(t, events.Items, 2)
 				event := events.Items[0]
 				require.Equal(t, "installation_repositories:removed", event.Type)
-				require.Nil(t, event.Git)
-			},
-		},
-
-		{
-			name:        "installation_repositories webhook; create fails",
-			webhookType: "installation_repositories",
-			webhookBytes: func() []byte {
-				bytes, err := json.Marshal(
-					&github.InstallationRepositoriesEvent{
-						RepositoriesAdded: []*github.Repository{
-							{
-								FullName: github.String("brigadecore/brigade-github-gateway"),
-							},
-						},
+				require.Equal(
+					t,
+					map[string]string{
+						"repo": "brigadecore/brigade",
 					},
+					event.Qualifiers,
 				)
-				require.NoError(t, err)
-				return bytes
-			},
-			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
-					CreateFn: func(context.Context, core.Event) (core.EventList, error) {
-						return core.EventList{}, errors.New("something went wrong")
-					},
-				},
-			},
-			assertions: func(events core.EventList, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error emitting event(s) into Brigade")
+				require.Nil(t, event.Git)
+				event = events.Items[1]
+				require.Equal(t, "installation_repositories:removed", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
+				require.Nil(t, event.Git)
 			},
 		},
 
@@ -622,6 +606,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "issue_comment:foo", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Nil(t, event.Git)
 			},
 		},
@@ -658,6 +643,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "issues:foo", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Nil(t, event.Git)
 			},
 		},
@@ -694,6 +680,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "label:foo", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Nil(t, event.Git)
 			},
 		},
@@ -730,6 +717,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "member:foo", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Nil(t, event.Git)
 			},
 		},
@@ -766,6 +754,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "milestone:foo", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Nil(t, event.Git)
 			},
 		},
@@ -801,6 +790,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "page_build", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Nil(t, event.Git)
 			},
 		},
@@ -864,6 +854,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "project_card:foo", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Nil(t, event.Git)
 			},
 		},
@@ -900,6 +891,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "project_column:foo", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Nil(t, event.Git)
 			},
 		},
@@ -936,6 +928,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "project:foo", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Nil(t, event.Git)
 			},
 		},
@@ -971,6 +964,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "public", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Nil(t, event.Git)
 			},
 		},
@@ -1013,6 +1007,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "pull_request:foo", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
 					core.GitDetails{
@@ -1062,6 +1057,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "pull_request_review:foo", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
 					core.GitDetails{
@@ -1111,6 +1107,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "pull_request_review_comment:foo", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
 					core.GitDetails{
@@ -1159,6 +1156,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "push", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
 					core.GitDetails{
@@ -1205,6 +1203,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "release:foo", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
 					core.GitDetails{
@@ -1247,6 +1246,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "repository:foo", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Nil(t, event.Git)
 			},
 		},
@@ -1285,6 +1285,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "status", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
 					core.GitDetails{
@@ -1326,6 +1327,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "team_add", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Nil(t, event.Git)
 			},
 		},
@@ -1362,6 +1364,7 @@ func TestHandle(t *testing.T) {
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
 				require.Equal(t, "watch:foo", event.Type)
+				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Nil(t, event.Git)
 			},
 		},
@@ -1376,7 +1379,6 @@ func TestHandle(t *testing.T) {
 			)
 			for _, event := range events.Items {
 				require.Equal(t, "brigade.sh/github", event.Source)
-				require.Equal(t, testQualifiers, event.Qualifiers)
 			}
 			testCase.assertions(events, err)
 		})

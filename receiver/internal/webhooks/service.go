@@ -68,11 +68,12 @@ func (s *service) Handle(
 	webhookType string,
 	payload []byte,
 ) (core.EventList, error) {
-	var events core.EventList
+	var eventsToEmit []core.Event
+	var eventsEmitted core.EventList
 
 	webhook, err := github.ParseWebHook(webhookType, payload)
 	if err != nil {
-		return events, errors.Wrap(err, "error unmarshaling payload")
+		return eventsEmitted, errors.Wrap(err, "error unmarshaling payload")
 	}
 
 	if err = s.checkSuiteForwarding(ctx, appID, webhook); err != nil {
@@ -113,7 +114,7 @@ func (s *service) Handle(
 				"warning: could not process checkrun:rerequested webhook for job %q",
 				webhook.GetCheckRun().GetName(),
 			)
-			return events, nil
+			return eventsEmitted, nil
 		}
 		// NOTE: Targeting a specific project requires Brigade v2.2.0+
 		event.ProjectID = jobNameTokens[0]
@@ -139,6 +140,7 @@ func (s *service) Handle(
 				},
 			}
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#check_suite
@@ -170,6 +172,7 @@ func (s *service) Handle(
 				},
 			}
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#create
@@ -184,6 +187,7 @@ func (s *service) Handle(
 		event.Git = &core.GitDetails{
 			Ref: webhook.GetRef(),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#delete
@@ -195,6 +199,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// // From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#deployment
@@ -215,6 +220,7 @@ func (s *service) Handle(
 	// 		Commit: w.GetDeployment().GetSHA(),
 	// 		Ref:    w.GetDeployment().GetRef(),
 	// 	}
+	//  eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// // From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#deployment_status
@@ -235,6 +241,7 @@ func (s *service) Handle(
 	// 		Commit: w.GetDeployment().GetSHA(),
 	// 		Ref:    w.GetDeployment().GetRef(),
 	// 	}
+	//  eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#fork
@@ -245,6 +252,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#github_app_authorization
@@ -263,8 +271,7 @@ func (s *service) Handle(
 	// "Identifying and authorizing users for GitHub Apps."
 	case *github.GitHubAppAuthorizationEvent:
 		// We do not want to emit a corresponding event into Brigade's event bus, so
-		// just bail.
-		return events, nil
+		// there's nothing to do in this case.
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#gollum
@@ -276,6 +283,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#installation
@@ -288,19 +296,13 @@ func (s *service) Handle(
 		// Special handling for this webhook-- an installation can affect
 		// multiple repos, so we'll iterate over all affected repos to emit an event
 		// for each into Brigade's event bus.
+		eventsToEmit = []core.Event{}
 		for _, repo := range webhook.Repositories {
 			event.Qualifiers = map[string]string{
 				"repo": repo.GetFullName(),
 			}
-			var tmpEvents core.EventList
-			tmpEvents, err = s.eventsClient.Create(ctx, event)
-			events.Items = append(events.Items, tmpEvents.Items...)
-			if err != nil {
-				return events,
-					errors.Wrap(err, "error emitting event(s) into Brigade")
-			}
+			eventsToEmit = append(eventsToEmit, event)
 		}
-		return events, nil // We're done
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#installation_repositories
@@ -318,19 +320,13 @@ func (s *service) Handle(
 		if webhook.GetAction() == "removed" {
 			repos = webhook.RepositoriesRemoved
 		}
+		eventsToEmit = []core.Event{}
 		for _, repo := range repos {
 			event.Qualifiers = map[string]string{
 				"repo": repo.GetFullName(),
 			}
-			var tmpEvents core.EventList
-			tmpEvents, err = s.eventsClient.Create(ctx, event)
-			events.Items = append(events.Items, tmpEvents.Items...)
-			if err != nil {
-				return events,
-					errors.Wrap(err, "error emitting event(s) into Brigade")
-			}
+			eventsToEmit = append(eventsToEmit, event)
 		}
-		return events, nil // We're done
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#issue_comment
@@ -343,6 +339,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#issues
@@ -355,6 +352,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#label
@@ -367,6 +365,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#member
@@ -379,6 +378,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#milestone
@@ -391,6 +391,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#page_build
@@ -403,6 +404,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#ping
@@ -412,8 +414,7 @@ func (s *service) Handle(
 	// isn't retrievable via the Events API endpoint.
 	case *github.PingEvent:
 		// We do not want to emit a corresponding event into Brigade's event bus, so
-		// just bail.
-		return events, nil
+		// there's nothing to do here.
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#project_card
@@ -426,6 +427,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#project_column
@@ -438,6 +440,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#project
@@ -450,6 +453,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#public
@@ -461,6 +465,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#pull_request
@@ -479,6 +484,7 @@ func (s *service) Handle(
 			Commit: webhook.GetPullRequest().GetHead().GetSHA(),
 			Ref:    fmt.Sprintf("refs/pull/%d/head", webhook.GetPullRequest().GetNumber()),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#pull_request_review
@@ -497,6 +503,7 @@ func (s *service) Handle(
 			Commit: webhook.GetPullRequest().GetHead().GetSHA(),
 			Ref:    fmt.Sprintf("refs/pull/%d/head", webhook.GetPullRequest().GetNumber()),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#pull_request_review_comment
@@ -517,6 +524,7 @@ func (s *service) Handle(
 			Commit: webhook.GetPullRequest().GetHead().GetSHA(),
 			Ref:    fmt.Sprintf("refs/pull/%d/head", webhook.GetPullRequest().GetNumber()),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#push
@@ -538,6 +546,7 @@ func (s *service) Handle(
 			event.Type = "push:delete"
 			event.Git = nil
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#release
@@ -553,6 +562,7 @@ func (s *service) Handle(
 		event.Git = &core.GitDetails{
 			Ref: webhook.GetRelease().GetTagName(),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#repository
@@ -565,6 +575,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// // From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#star
@@ -580,6 +591,7 @@ func (s *service) Handle(
 	// 		// error is in the documentation, which is a possibility).
 	// 		"repo": w.GetRepo().GetFullName(),
 	// 	}
+	// eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#status
@@ -595,6 +607,7 @@ func (s *service) Handle(
 		event.Git = &core.GitDetails{
 			Commit: webhook.GetCommit().GetSHA(),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#team_add
@@ -605,6 +618,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
+		eventsToEmit = []core.Event{event}
 
 	// nolint: lll
 	// https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#watch
@@ -623,17 +637,21 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-
-	default:
-		return events, nil
+		eventsToEmit = []core.Event{event}
 	}
 
-	events, err = s.eventsClient.Create(ctx, event)
-	if err != nil {
-		return events, errors.Wrap(err, "error emitting event(s) into Brigade")
+	for _, event = range eventsToEmit {
+		var events core.EventList
+		if events, err = s.eventsClient.Create(ctx, event); err != nil {
+			return eventsEmitted, errors.Wrap(
+				err,
+				"error emitting event(s) into Brigade",
+			)
+		}
+		eventsEmitted.Items = append(eventsEmitted.Items, events.Items...)
 	}
 
-	return events, nil
+	return eventsEmitted, nil
 }
 
 // getTitlesFromPushWebhook extracts human-readable titles from a
