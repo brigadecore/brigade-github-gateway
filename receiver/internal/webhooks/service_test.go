@@ -38,17 +38,17 @@ func TestHandle(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name       string
-		eventType  string
-		eventBytes func() []byte
-		service    *service
-		assertions func(core.EventList, error)
+		name         string
+		webhookType  string
+		webhookBytes func() []byte
+		service      *service
+		assertions   func(core.EventList, error)
 	}{
 
 		{
-			name:      "unknown event type",
-			eventType: "bogus",
-			eventBytes: func() []byte {
+			name:        "unknown webhook type",
+			webhookType: "bogus",
+			webhookBytes: func() []byte {
 				return []byte("{}")
 			},
 			service: &service{
@@ -66,9 +66,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "bad payload",
-			eventType: "check_suite",
-			eventBytes: func() []byte {
+			name:        "bad payload",
+			webhookType: "check_suite",
+			webhookBytes: func() []byte {
 				return []byte("")
 			},
 			service: &service{
@@ -86,9 +86,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "unsupported event type",
-			eventType: "deployment",
-			eventBytes: func() []byte {
+			name:        "unsupported webhook type",
+			webhookType: "deployment",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(&github.DeploymentEvent{})
 				require.NoError(t, err)
 				return bytes
@@ -108,9 +108,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "check_run event with unparsable name",
-			eventType: "check_run",
-			eventBytes: func() []byte {
+			name:        "check_run event with unparsable name",
+			webhookType: "check_run",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.CheckRunEvent{
 						Action: github.String("rerequested"),
@@ -136,9 +136,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "check_run event",
-			eventType: "check_run",
-			eventBytes: func() []byte {
+			name:        "check_run webhook",
+			webhookType: "check_run",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.CheckRunEvent{
 						Action: github.String("rerequested"),
@@ -187,9 +187,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "check_suite event",
-			eventType: "check_suite",
-			eventBytes: func() []byte {
+			name:        "check_suite webhook",
+			webhookType: "check_suite",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.CheckSuiteEvent{
 						Action: github.String("requested"),
@@ -234,9 +234,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "create event",
-			eventType: "create",
-			eventBytes: func() []byte {
+			name:        "create webhook",
+			webhookType: "create",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.CreateEvent{
 						Repo: testRepo,
@@ -276,9 +276,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "delete event",
-			eventType: "delete",
-			eventBytes: func() []byte {
+			name:        "delete webhook",
+			webhookType: "delete",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.DeleteEvent{
 						Repo: testRepo,
@@ -311,9 +311,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "fork event",
-			eventType: "fork",
-			eventBytes: func() []byte {
+			name:        "fork webhook",
+			webhookType: "fork",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.ForkEvent{
 						Repo: testRepo,
@@ -346,9 +346,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "github_app_authorization event",
-			eventType: "github_app_authorization",
-			eventBytes: func() []byte {
+			name:        "github_app_authorization webhook",
+			webhookType: "github_app_authorization",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.GitHubAppAuthorizationEvent{},
 				)
@@ -370,9 +370,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "gollum event",
-			eventType: "gollum",
-			eventBytes: func() []byte {
+			name:        "gollum webhook",
+			webhookType: "gollum",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.GollumEvent{
 						Repo: testRepo,
@@ -405,9 +405,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "installation event",
-			eventType: "installation",
-			eventBytes: func() []byte {
+			name:        "installation webhook",
+			webhookType: "installation",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.InstallationEvent{
 						Action: testGenericAction,
@@ -445,9 +445,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "installation event; create fails",
-			eventType: "installation",
-			eventBytes: func() []byte {
+			name:        "installation webhook; create fails",
+			webhookType: "installation",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.InstallationEvent{
 						Repositories: []*github.Repository{
@@ -478,9 +478,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "installation_repositories event",
-			eventType: "installation_repositories",
-			eventBytes: func() []byte {
+			name:        "installation_repositories webhook",
+			webhookType: "installation_repositories",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.InstallationRepositoriesEvent{
 						Action: github.String("added"),
@@ -518,9 +518,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "installation_repositories event; action is removed",
-			eventType: "installation_repositories",
-			eventBytes: func() []byte {
+			name:        "installation_repositories webhook; action is removed",
+			webhookType: "installation_repositories",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.InstallationRepositoriesEvent{
 						Action: github.String("removed"),
@@ -558,9 +558,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "installation_repositories event; create fails",
-			eventType: "installation_repositories",
-			eventBytes: func() []byte {
+			name:        "installation_repositories webhook; create fails",
+			webhookType: "installation_repositories",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.InstallationRepositoriesEvent{
 						RepositoriesAdded: []*github.Repository{
@@ -588,9 +588,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "issue_comment event",
-			eventType: "issue_comment",
-			eventBytes: func() []byte {
+			name:        "issue_comment webhook",
+			webhookType: "issue_comment",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.IssueCommentEvent{
 						Action: testGenericAction,
@@ -627,9 +627,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "issues event",
-			eventType: "issues",
-			eventBytes: func() []byte {
+			name:        "issues webhook",
+			webhookType: "issues",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.IssuesEvent{
 						Action: testGenericAction,
@@ -663,9 +663,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "label event",
-			eventType: "label",
-			eventBytes: func() []byte {
+			name:        "label webhook",
+			webhookType: "label",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.LabelEvent{
 						Action: testGenericAction,
@@ -699,9 +699,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "member event",
-			eventType: "member",
-			eventBytes: func() []byte {
+			name:        "member webhook",
+			webhookType: "member",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.MemberEvent{
 						Action: testGenericAction,
@@ -735,9 +735,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "milestone event",
-			eventType: "milestone",
-			eventBytes: func() []byte {
+			name:        "milestone webhook",
+			webhookType: "milestone",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.MilestoneEvent{
 						Action: testGenericAction,
@@ -771,9 +771,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "page_build event",
-			eventType: "page_build",
-			eventBytes: func() []byte {
+			name:        "page_build webhook",
+			webhookType: "page_build",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.PageBuildEvent{
 						Repo: testRepo,
@@ -806,9 +806,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "ping event",
-			eventType: "ping",
-			eventBytes: func() []byte {
+			name:        "ping webhook",
+			webhookType: "ping",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.PingEvent{},
 				)
@@ -833,9 +833,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "project_card event",
-			eventType: "project_card",
-			eventBytes: func() []byte {
+			name:        "project_card webhook",
+			webhookType: "project_card",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.ProjectCardEvent{
 						Action: testGenericAction,
@@ -869,9 +869,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "project_column event",
-			eventType: "project_column",
-			eventBytes: func() []byte {
+			name:        "project_column webhook",
+			webhookType: "project_column",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.ProjectColumnEvent{
 						Action: testGenericAction,
@@ -905,9 +905,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "project event",
-			eventType: "project",
-			eventBytes: func() []byte {
+			name:        "project webhook",
+			webhookType: "project",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.ProjectEvent{
 						Action: testGenericAction,
@@ -941,9 +941,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "public event",
-			eventType: "public",
-			eventBytes: func() []byte {
+			name:        "public webhook",
+			webhookType: "public",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.PublicEvent{
 						Repo: testRepo,
@@ -976,9 +976,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "pull_request event",
-			eventType: "pull_request",
-			eventBytes: func() []byte {
+			name:        "pull_request webhook",
+			webhookType: "pull_request",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.PullRequestEvent{
 						Action: testGenericAction,
@@ -1025,9 +1025,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "pull_request_review event",
-			eventType: "pull_request_review",
-			eventBytes: func() []byte {
+			name:        "pull_request_review webhook",
+			webhookType: "pull_request_review",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.PullRequestReviewEvent{
 						Action: testGenericAction,
@@ -1074,9 +1074,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "pull_request_review_comment event",
-			eventType: "pull_request_review_comment",
-			eventBytes: func() []byte {
+			name:        "pull_request_review_comment webhook",
+			webhookType: "pull_request_review_comment",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.PullRequestReviewCommentEvent{
 						Action: testGenericAction,
@@ -1123,9 +1123,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "push event",
-			eventType: "push",
-			eventBytes: func() []byte {
+			name:        "push webhook",
+			webhookType: "push",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.PushEvent{
 						Repo: &github.PushEventRepository{
@@ -1171,9 +1171,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "release event",
-			eventType: "release",
-			eventBytes: func() []byte {
+			name:        "release webhook",
+			webhookType: "release",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.ReleaseEvent{
 						Action: testGenericAction,
@@ -1216,9 +1216,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "repository event",
-			eventType: "repository",
-			eventBytes: func() []byte {
+			name:        "repository webhook",
+			webhookType: "repository",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.RepositoryEvent{
 						Action: testGenericAction,
@@ -1252,9 +1252,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "status event",
-			eventType: "status",
-			eventBytes: func() []byte {
+			name:        "status webhook",
+			webhookType: "status",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.StatusEvent{
 						Repo: testRepo,
@@ -1296,9 +1296,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "team_add event",
-			eventType: "team_add",
-			eventBytes: func() []byte {
+			name:        "team_add webhook",
+			webhookType: "team_add",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.TeamAddEvent{
 						Repo: testRepo,
@@ -1331,9 +1331,9 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
-			name:      "watch event",
-			eventType: "watch",
-			eventBytes: func() []byte {
+			name:        "watch webhook",
+			webhookType: "watch",
+			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.WatchEvent{
 						Action: testGenericAction,
@@ -1371,8 +1371,8 @@ func TestHandle(t *testing.T) {
 			events, err := testCase.service.Handle(
 				context.Background(),
 				42, // Just a fake app ID
-				testCase.eventType,
-				testCase.eventBytes(),
+				testCase.webhookType,
+				testCase.webhookBytes(),
 			)
 			for _, event := range events.Items {
 				require.Equal(t, "brigade.sh/github", event.Source)
@@ -1419,28 +1419,28 @@ func TestIsAllowedAuthorAssociation(t *testing.T) {
 	}
 }
 
-func TestGetTitlesFromPushEvent(t *testing.T) {
+func TestGetTitlesFromPushWebhook(t *testing.T) {
 	testCases := []struct {
 		name               string
-		pushEvent          *github.PushEvent
+		webhook            *github.PushEvent
 		expectedShortTitle string
 		expectedLongTitle  string
 	}{
 		{
-			name:               "nil PushEvent",
-			pushEvent:          nil,
+			name:               "nil webhook",
+			webhook:            nil,
 			expectedShortTitle: "",
 			expectedLongTitle:  "",
 		},
 		{
 			name:               "nil ref",
-			pushEvent:          &github.PushEvent{},
+			webhook:            &github.PushEvent{},
 			expectedShortTitle: "",
 			expectedLongTitle:  "",
 		},
 		{
 			name: "no regex match on ref",
-			pushEvent: &github.PushEvent{
+			webhook: &github.PushEvent{
 				Ref: github.String("foobar"),
 			},
 			expectedShortTitle: "",
@@ -1448,7 +1448,7 @@ func TestGetTitlesFromPushEvent(t *testing.T) {
 		},
 		{
 			name: "title from branch",
-			pushEvent: &github.PushEvent{
+			webhook: &github.PushEvent{
 				Ref: github.String("refs/heads/foo"),
 			},
 			expectedShortTitle: "branch: foo",
@@ -1456,7 +1456,7 @@ func TestGetTitlesFromPushEvent(t *testing.T) {
 		},
 		{
 			name: "title from tag",
-			pushEvent: &github.PushEvent{
+			webhook: &github.PushEvent{
 				Ref: github.String("refs/tags/foo"),
 			},
 			expectedShortTitle: "tag: foo",
@@ -1465,7 +1465,7 @@ func TestGetTitlesFromPushEvent(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			shortTitle, longTitle := getTitlesFromPushEvent(testCase.pushEvent)
+			shortTitle, longTitle := getTitlesFromPushWebhook(testCase.webhook)
 			require.Equal(t, testCase.expectedShortTitle, shortTitle)
 			require.Equal(t, testCase.expectedLongTitle, longTitle)
 		})

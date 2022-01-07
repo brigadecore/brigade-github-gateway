@@ -11,15 +11,14 @@ import (
 )
 
 // handler is an implementation of the http.Handler interface that can handle
-// webhooks (events) from GitHub by delegating to a transport-agnostic Service
-// interface.
+// webhooks from GitHub by delegating to a transport-agnostic Service interface.
 type handler struct {
 	service Service
 }
 
 // NewHandler returns an implementation of the http.Handler interface that can
-// handle webhooks (events) from GitHub by delegating to a transport-agnostic
-// Service interface.
+// handle webhooks from GitHub by delegating to a transport-agnostic Service
+// interface.
 func NewHandler(service Service) http.Handler {
 	return &handler{
 		service: service,

@@ -25,21 +25,21 @@ type ServiceConfig struct {
 	// GitHubApps is a map of GitHub App configurations indexed by App ID.
 	GitHubApps map[int64]ghlib.App
 	// CheckSuiteAllowedAuthorAssociations enumerates the author associations who
-	// are allowed to have their PR events and "/brig check" or "/brig run"
-	// comments trigger the creation of a GitHub CheckSuite. Possible values are:
+	// are allowed to have their PRs and "/brig check" or "/brig run" comments
+	// trigger the creation of a GitHub CheckSuite. Possible values are:
 	// COLLABORATOR, CONTRIBUTOR, OWNER, NONE, MEMBER, FIRST_TIMER, and
 	// FIRST_TME_CONTRIBUTOR.
 	CheckSuiteAllowedAuthorAssociations []string
 }
 
-// Service is an interface for components that can handle webhooks (events) from
-// GitHub. Implementations of this interface are transport-agnostic.
+// Service is an interface for components that can handle webhooks from GitHub.
+// Implementations of this interface are transport-agnostic.
 type Service interface {
-	// Handle handles a GitHub webhook (event).
+	// Handle handles a GitHub webhook.
 	Handle(
 		ctx context.Context,
 		appID int64,
-		eventType string,
+		webhookType string,
 		payload []byte,
 	) (core.EventList, error)
 }
@@ -50,7 +50,7 @@ type service struct {
 }
 
 // NewService returns an implementation of the Service interface for handling
-// (events) from GitHub.
+// webhooks from GitHub.
 func NewService(
 	eventsClient core.EventsClient,
 	config ServiceConfig,
@@ -65,17 +65,17 @@ func NewService(
 func (s *service) Handle(
 	ctx context.Context,
 	appID int64,
-	eventType string,
+	webhookType string,
 	payload []byte,
 ) (core.EventList, error) {
 	var events core.EventList
 
-	srcEvent, err := github.ParseWebHook(eventType, payload)
+	webhook, err := github.ParseWebHook(webhookType, payload)
 	if err != nil {
 		return events, errors.Wrap(err, "error unmarshaling payload")
 	}
 
-	brigadeEvent := core.Event{
+	event := core.Event{
 		Source:  "brigade.sh/github",
 		Payload: string(payload),
 		Labels: map[string]string{
@@ -84,11 +84,11 @@ func (s *service) Handle(
 	}
 
 	// Most of this function is just a giant type switch that extracts relevant
-	// details from all the known GitHub webhook (event) types, each of which is
+	// details from all the known GitHub webhook types, each of which is
 	// represented by its own Go type. For developer convenience, each case links
 	// to relevant GitHub API docs.
 
-	switch e := srcEvent.(type) {
+	switch webhook := webhook.(type) {
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#check_run
@@ -100,32 +100,35 @@ func (s *service) Handle(
 		// A request to re-run a check should be delivered only to the Brigade
 		// project that created the corresponding job in the first place, so here we
 		// attempt to determine the name of that project.
-		jobNameTokens := strings.SplitN(e.GetCheckRun().GetName(), ":", 2)
+		jobNameTokens := strings.SplitN(webhook.GetCheckRun().GetName(), ":", 2)
 		if len(jobNameTokens) != 2 {
 			log.Printf(
 				"warning: could not process checkrun:rerequested webhook for job %q",
-				e.GetCheckRun().GetName(),
+				webhook.GetCheckRun().GetName(),
 			)
 			return events, nil
 		}
 		// NOTE: Targeting a specific project requires Brigade v2.2.0+
-		brigadeEvent.ProjectID = jobNameTokens[0]
-		brigadeEvent.Type = fmt.Sprintf("check_run:%s", e.GetAction())
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.ProjectID = jobNameTokens[0]
+		event.Type = fmt.Sprintf("check_run:%s", webhook.GetAction())
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
-		brigadeEvent.Git = &core.GitDetails{
-			Commit: e.GetCheckRun().GetCheckSuite().GetHeadSHA(),
-			Ref:    e.GetCheckRun().GetCheckSuite().GetHeadBranch(),
+		event.Git = &core.GitDetails{
+			Commit: webhook.GetCheckRun().GetCheckSuite().GetHeadSHA(),
+			Ref:    webhook.GetCheckRun().GetCheckSuite().GetHeadBranch(),
 		}
-		if e.GetAction() == "rerequested" {
-			brigadeEvent.SourceState = &core.SourceState{
+		if webhook.GetAction() == "rerequested" {
+			event.SourceState = &core.SourceState{
 				State: map[string]string{
-					"tracking":       "true",
-					"installationID": strconv.FormatInt(e.GetInstallation().GetID(), 10),
-					"owner":          e.GetRepo().GetOwner().GetLogin(),
-					"repo":           e.GetRepo().GetName(),
-					"headSHA":        e.GetCheckRun().GetCheckSuite().GetHeadSHA(),
+					"tracking": "true",
+					"installationID": strconv.FormatInt(
+						webhook.GetInstallation().GetID(),
+						10,
+					),
+					"owner":   webhook.GetRepo().GetOwner().GetLogin(),
+					"repo":    webhook.GetRepo().GetName(),
+					"headSHA": webhook.GetCheckRun().GetCheckSuite().GetHeadSHA(),
 				},
 			}
 		}
@@ -137,22 +140,26 @@ func (s *service) Handle(
 	// action property of the payload object. For more information, see the "check
 	// suites" REST API.
 	case *github.CheckSuiteEvent:
-		brigadeEvent.Type = fmt.Sprintf("check_suite:%s", e.GetAction())
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = fmt.Sprintf("check_suite:%s", webhook.GetAction())
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
-		brigadeEvent.Git = &core.GitDetails{
-			Commit: e.GetCheckSuite().GetHeadSHA(),
-			Ref:    e.GetCheckSuite().GetHeadBranch(),
+		event.Git = &core.GitDetails{
+			Commit: webhook.GetCheckSuite().GetHeadSHA(),
+			Ref:    webhook.GetCheckSuite().GetHeadBranch(),
 		}
-		if e.GetAction() == "requested" || e.GetAction() == "rerequested" {
-			brigadeEvent.SourceState = &core.SourceState{
+		if webhook.GetAction() == "requested" ||
+			webhook.GetAction() == "rerequested" {
+			event.SourceState = &core.SourceState{
 				State: map[string]string{
-					"tracking":       "true",
-					"installationID": strconv.FormatInt(e.GetInstallation().GetID(), 10),
-					"owner":          e.GetRepo().GetOwner().GetLogin(),
-					"repo":           e.GetRepo().GetName(),
-					"headSHA":        e.GetCheckSuite().GetHeadSHA(),
+					"tracking": "true",
+					"installationID": strconv.FormatInt(
+						webhook.GetInstallation().GetID(),
+						10,
+					),
+					"owner":   webhook.GetRepo().GetOwner().GetLogin(),
+					"repo":    webhook.GetRepo().GetName(),
+					"headSHA": webhook.GetCheckSuite().GetHeadSHA(),
 				},
 			}
 		}
@@ -163,12 +170,12 @@ func (s *service) Handle(
 	// A Git branch or tag is created. For more information, see the "Git data"
 	// REST API.
 	case *github.CreateEvent:
-		brigadeEvent.Type = "create"
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = "create"
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
-		brigadeEvent.Git = &core.GitDetails{
-			Ref: e.GetRef(),
+		event.Git = &core.GitDetails{
+			Ref: webhook.GetRef(),
 		}
 
 	// nolint: lll
@@ -177,9 +184,9 @@ func (s *service) Handle(
 	// A Git branch or tag is deleted. For more information, see the "Git data"
 	// REST API.
 	case *github.DeleteEvent:
-		brigadeEvent.Type = "delete"
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = "delete"
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
 
 	// nolint: lll
@@ -190,16 +197,16 @@ func (s *service) Handle(
 	// // REST API.
 	// case *github.DeploymentEvent:
 	// 	// TODO: DeploymentEvent is missing the action property mentioned above.
-	// 	// We can add support for this event after opening a PR upstream (or
+	// 	// We can add support for this webhook after opening a PR upstream (or
 	// 	// determining that the error is in the documentation, which is a
 	// 	// possibility).
-	// 	brigadeEvent.Type = fmt.Sprintf("deployment:%s", e.GetAction())
-	// 	brigadeEvent.Qualifiers = map[string]string{
-	// 		"repo": e.GetRepo().GetFullName(),
+	// 	event.Type = fmt.Sprintf("deployment:%s", w.GetAction())
+	// 	event.Qualifiers = map[string]string{
+	// 		"repo": w.GetRepo().GetFullName(),
 	// 	}
-	// 	brigadeEvent.Git = &core.GitDetails{
-	// 		Commit: e.GetDeployment().GetSHA(),
-	// 		Ref:    e.GetDeployment().GetRef(),
+	// 	event.Git = &core.GitDetails{
+	// 		Commit: w.GetDeployment().GetSHA(),
+	// 		Ref:    w.GetDeployment().GetRef(),
 	// 	}
 
 	// nolint: lll
@@ -210,16 +217,16 @@ func (s *service) Handle(
 	// // statuses" REST API.
 	// case *github.DeploymentStatusEvent:
 	//  // TODO: DeploymentStatusEvent is missing the action property mentioned
-	//  // above. We can add support for this event after opening a PR upstream
+	//  // above. We can add support for this webhook after opening a PR upstream
 	//  // (or determining that the error is in the documentation, which is a
 	//  // possibility).
-	// 	brigadeEvent.Type = fmt.Sprintf("deployment_status:%s", e.GetAction())
-	// 	brigadeEvent.Qualifiers = map[string]string{
-	// 		"repo": e.GetRepo().GetFullName(),
+	// 	event.Type = fmt.Sprintf("deployment_status:%s", w.GetAction())
+	// 	event.Qualifiers = map[string]string{
+	// 		"repo": w.GetRepo().GetFullName(),
 	// 	}
-	// 	brigadeEvent.Git = &core.GitDetails{
-	// 		Commit: e.GetDeployment().GetSHA(),
-	// 		Ref:    e.GetDeployment().GetRef(),
+	// 	event.Git = &core.GitDetails{
+	// 		Commit: w.GetDeployment().GetSHA(),
+	// 		Ref:    w.GetDeployment().GetRef(),
 	// 	}
 
 	// nolint: lll
@@ -227,9 +234,9 @@ func (s *service) Handle(
 	//
 	// A user forks a repository. For more information, see the "forks" REST API.
 	case *github.ForkEvent:
-		brigadeEvent.Type = "fork"
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = "fork"
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
 
 	// nolint: lll
@@ -248,17 +255,19 @@ func (s *service) Handle(
 	// user-to-server requests, which require GitHub App authorization, see
 	// "Identifying and authorizing users for GitHub Apps."
 	case *github.GitHubAppAuthorizationEvent:
-		// We do not want to propagate this event to Brigade, so just bail.
+		// We do not want to emit a corresponding event into Brigade's event bus, so
+		// just bail.
 		return events, nil
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#gollum
 	//
-	// A wiki page is created or updated. For more information, see the "About wikis".
+	// A wiki page is created or updated. For more information, see the "About
+	// wikis".
 	case *github.GollumEvent:
-		brigadeEvent.Type = "gollum"
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = "gollum"
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
 
 	// nolint: lll
@@ -268,16 +277,16 @@ func (s *service) Handle(
 	// specified in the action property of the payload object. For more
 	// information, see the "GitHub App installation" REST API.
 	case *github.InstallationEvent:
-		brigadeEvent.Type = fmt.Sprintf("installation:%s", e.GetAction())
-		// Special handling for this event type-- an installation can affect
-		// multiple repos, so we'll iterate over all affected repos to propagate
-		// events for each into Brigade.
-		for _, repo := range e.Repositories {
-			brigadeEvent.Qualifiers = map[string]string{
+		event.Type = fmt.Sprintf("installation:%s", webhook.GetAction())
+		// Special handling for this webhook-- an installation can affect
+		// multiple repos, so we'll iterate over all affected repos to emit an event
+		// for each into Brigade's event bus.
+		for _, repo := range webhook.Repositories {
+			event.Qualifiers = map[string]string{
 				"repo": repo.GetFullName(),
 			}
 			var tmpEvents core.EventList
-			tmpEvents, err = s.eventsClient.Create(ctx, brigadeEvent)
+			tmpEvents, err = s.eventsClient.Create(ctx, event)
 			events.Items = append(events.Items, tmpEvents.Items...)
 			if err != nil {
 				return events,
@@ -293,21 +302,21 @@ func (s *service) Handle(
 	// The type of activity is specified in the action property of the payload
 	// object. For more information, see the "GitHub App installation" REST API.
 	case *github.InstallationRepositoriesEvent:
-		brigadeEvent.Type =
-			fmt.Sprintf("installation_repositories:%s", e.GetAction())
-		// Special handling for this event type-- this event can affect multiple
-		// repos, so we'll iterate over all affected repos to propagate events for
-		// each into Brigade.
-		repos := e.RepositoriesAdded
-		if e.GetAction() == "removed" {
-			repos = e.RepositoriesRemoved
+		event.Type =
+			fmt.Sprintf("installation_repositories:%s", webhook.GetAction())
+		// Special handling for this webhook-- installation/uninstallation can
+		// affect multiple repos, so we'll iterate over all affected repos to emit
+		// an event for each into Brigade's event bus.
+		repos := webhook.RepositoriesAdded
+		if webhook.GetAction() == "removed" {
+			repos = webhook.RepositoriesRemoved
 		}
 		for _, repo := range repos {
-			brigadeEvent.Qualifiers = map[string]string{
+			event.Qualifiers = map[string]string{
 				"repo": repo.GetFullName(),
 			}
 			var tmpEvents core.EventList
-			tmpEvents, err = s.eventsClient.Create(ctx, brigadeEvent)
+			tmpEvents, err = s.eventsClient.Create(ctx, event)
 			events.Items = append(events.Items, tmpEvents.Items...)
 			if err != nil {
 				return events,
@@ -323,9 +332,9 @@ func (s *service) Handle(
 	// the action property of the payload object. For more information, see the
 	// "issue comments" REST API.
 	case *github.IssueCommentEvent:
-		brigadeEvent.Type = fmt.Sprintf("issue_comment:%s", e.GetAction())
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = fmt.Sprintf("issue_comment:%s", webhook.GetAction())
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
 		// Under a very specific set of conditions, we will request a check suite to
 		// run in response to this comment.
@@ -334,30 +343,30 @@ func (s *service) Handle(
 		// 2. The comment contains "/brig check" or "/brig run" (case insensitive)
 		// 3. Requesting a check suite in response to a comment is enabled
 		// 4. The comment's author is allowed to request a check suite
-		comment := strings.ToLower(e.GetComment().GetBody())
-		if e.GetIssue().IsPullRequest() && e.GetAction() == "created" &&
+		comment := strings.ToLower(webhook.GetComment().GetBody())
+		if webhook.GetIssue().IsPullRequest() && webhook.GetAction() == "created" &&
 			(strings.Contains(comment, "/brig check") || strings.Contains(comment, "/brig run")) && // nolint: lll
-			s.isAllowedAuthorAssociation(e.GetComment().GetAuthorAssociation()) {
+			s.isAllowedAuthorAssociation(webhook.GetComment().GetAuthorAssociation()) {
 			var pr *github.PullRequest
-			if pr, err = s.getPRFromIssueCommentEvent(
+			if pr, err = s.getPRFromIssueCommentWebhook(
 				ctx,
 				s.config.GitHubApps[appID],
-				*e,
+				*webhook,
 			); err != nil {
-				// Log it and continue on. We can (and still should) emit the original
-				// event into Brigade.
+				// Log it and continue on. We can (and still should) emit the event into
+				// Brigade's event bus.
 				log.Println(err)
 			} else {
 				if err = s.requestCheckSuite(
 					ctx,
 					s.config.GitHubApps[appID],
-					e.GetInstallation().GetID(),
-					e.GetRepo().GetOwner().GetLogin(),
-					e.GetRepo().GetName(),
+					webhook.GetInstallation().GetID(),
+					webhook.GetRepo().GetOwner().GetLogin(),
+					webhook.GetRepo().GetName(),
 					pr.GetHead().GetSHA(),
 				); err != nil {
-					// Log it and continue on. We can (and still should) emit the original
-					// event into Brigade.
+					// Log it and continue on. We can (and still should) emit the event
+					// into Brigade's event bus.
 					log.Println(err)
 				}
 			}
@@ -370,9 +379,9 @@ func (s *service) Handle(
 	// action property of the payload object. For more information, see the
 	// "issues" REST API.
 	case *github.IssuesEvent:
-		brigadeEvent.Type = fmt.Sprintf("issues:%s", e.GetAction())
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = fmt.Sprintf("issues:%s", webhook.GetAction())
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
 
 	// nolint: lll
@@ -382,9 +391,9 @@ func (s *service) Handle(
 	// action property of the payload object. For more information, see the
 	// "labels" REST API.
 	case *github.LabelEvent:
-		brigadeEvent.Type = fmt.Sprintf("label:%s", e.GetAction())
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = fmt.Sprintf("label:%s", webhook.GetAction())
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
 
 	// nolint: lll
@@ -394,9 +403,9 @@ func (s *service) Handle(
 	// specified in the action property of the payload object. For more
 	// information, see the "collaborators" REST API.
 	case *github.MemberEvent:
-		brigadeEvent.Type = fmt.Sprintf("member:%s", e.GetAction())
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = fmt.Sprintf("member:%s", webhook.GetAction())
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
 
 	// nolint: lll
@@ -406,9 +415,9 @@ func (s *service) Handle(
 	// action property of the payload object. For more information, see the
 	// "milestones" REST API.
 	case *github.MilestoneEvent:
-		brigadeEvent.Type = fmt.Sprintf("milestone:%s", e.GetAction())
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = fmt.Sprintf("milestone:%s", webhook.GetAction())
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
 
 	// nolint: lll
@@ -418,9 +427,9 @@ func (s *service) Handle(
 	// not. A push to a GitHub Pages enabled branch (gh-pages for project pages,
 	// the default branch for user and organization pages) triggers this event.
 	case *github.PageBuildEvent:
-		brigadeEvent.Type = "page_build"
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = "page_build"
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
 
 	// nolint: lll
@@ -430,7 +439,8 @@ func (s *service) Handle(
 	// you know you've set up the webhook correctly. This event isn't stored so it
 	// isn't retrievable via the Events API endpoint.
 	case *github.PingEvent:
-		// We do not want to propagate this event to Brigade, so just bail.
+		// We do not want to emit a corresponding event into Brigade's event bus, so
+		// just bail.
 		return events, nil
 
 	// nolint: lll
@@ -440,9 +450,9 @@ func (s *service) Handle(
 	// action property of the payload object. For more information, see the
 	// "project cards" REST API.
 	case *github.ProjectCardEvent:
-		brigadeEvent.Type = fmt.Sprintf("project_card:%s", e.GetAction())
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = fmt.Sprintf("project_card:%s", webhook.GetAction())
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
 
 	// nolint: lll
@@ -452,9 +462,9 @@ func (s *service) Handle(
 	// specified in the action property of the payload object. For more
 	// information, see the "project columns" REST API.
 	case *github.ProjectColumnEvent:
-		brigadeEvent.Type = fmt.Sprintf("project_column:%s", e.GetAction())
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = fmt.Sprintf("project_column:%s", webhook.GetAction())
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
 
 	// nolint: lll
@@ -464,19 +474,20 @@ func (s *service) Handle(
 	// the action property of the payload object. For more information, see the
 	// "projects" REST API.
 	case *github.ProjectEvent:
-		brigadeEvent.Type = fmt.Sprintf("project:%s", e.GetAction())
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = fmt.Sprintf("project:%s", webhook.GetAction())
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#public
 	//
-	// When a private repository is made public. Without a doubt: the best GitHub AE event.
+	// When a private repository is made public. Without a doubt: the best GitHub
+	// AE event.
 	case *github.PublicEvent:
-		brigadeEvent.Type = "public"
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = "public"
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
 
 	// nolint: lll
@@ -486,15 +497,15 @@ func (s *service) Handle(
 	// action property of the payload object. For more information, see the "pull
 	// requests" REST API.
 	case *github.PullRequestEvent:
-		brigadeEvent.Type = fmt.Sprintf("pull_request:%s", e.GetAction())
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = fmt.Sprintf("pull_request:%s", webhook.GetAction())
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
-		brigadeEvent.ShortTitle, brigadeEvent.LongTitle =
-			getTitlesFromPR(e.GetPullRequest())
-		brigadeEvent.Git = &core.GitDetails{
-			Commit: e.GetPullRequest().GetHead().GetSHA(),
-			Ref:    fmt.Sprintf("refs/pull/%d/head", e.GetPullRequest().GetNumber()),
+		event.ShortTitle, event.LongTitle =
+			getTitlesFromPR(webhook.GetPullRequest())
+		event.Git = &core.GitDetails{
+			Commit: webhook.GetPullRequest().GetHead().GetSHA(),
+			Ref:    fmt.Sprintf("refs/pull/%d/head", webhook.GetPullRequest().GetNumber()),
 		}
 		// Under a very specific set of conditions, we will request a check suite to
 		// run in response to this PR.
@@ -508,20 +519,20 @@ func (s *service) Handle(
 		//       automatically trigger check suites. Were we to request a check
 		//       suite at this juncture, it would be a duplicate.
 		// 4. The PR's author is allowed to request a check suite
-		switch e.GetAction() {
+		switch webhook.GetAction() {
 		case "opened", "synchronize", "reopened":
-			if e.GetPullRequest().GetHead().GetRepo().GetFork() &&
-				s.isAllowedAuthorAssociation(e.GetPullRequest().GetAuthorAssociation()) {
+			if webhook.GetPullRequest().GetHead().GetRepo().GetFork() &&
+				s.isAllowedAuthorAssociation(webhook.GetPullRequest().GetAuthorAssociation()) {
 				if err = s.requestCheckSuite(
 					ctx,
 					s.config.GitHubApps[appID],
-					e.GetInstallation().GetID(),
-					e.GetRepo().GetOwner().GetLogin(),
-					e.GetRepo().GetName(),
-					e.GetPullRequest().GetHead().GetSHA(),
+					webhook.GetInstallation().GetID(),
+					webhook.GetRepo().GetOwner().GetLogin(),
+					webhook.GetRepo().GetName(),
+					webhook.GetPullRequest().GetHead().GetSHA(),
 				); err != nil {
-					// Log it and continue on. We can (and still should) emit the original
-					// event into Brigade.
+					// Log it and continue on. We can (and still should) emit the event
+					// into Brigade's event bus.
 					log.Println(err)
 				}
 			}
@@ -534,15 +545,15 @@ func (s *service) Handle(
 	// in the action property of the payload object. For more information, see the
 	// "pull request reviews" REST API.
 	case *github.PullRequestReviewEvent:
-		brigadeEvent.Type = fmt.Sprintf("pull_request_review:%s", e.GetAction())
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = fmt.Sprintf("pull_request_review:%s", webhook.GetAction())
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
-		brigadeEvent.ShortTitle, brigadeEvent.LongTitle =
-			getTitlesFromPR(e.GetPullRequest())
-		brigadeEvent.Git = &core.GitDetails{
-			Commit: e.GetPullRequest().GetHead().GetSHA(),
-			Ref:    fmt.Sprintf("refs/pull/%d/head", e.GetPullRequest().GetNumber()),
+		event.ShortTitle, event.LongTitle =
+			getTitlesFromPR(webhook.GetPullRequest())
+		event.Git = &core.GitDetails{
+			Commit: webhook.GetPullRequest().GetHead().GetSHA(),
+			Ref:    fmt.Sprintf("refs/pull/%d/head", webhook.GetPullRequest().GetNumber()),
 		}
 
 	// nolint: lll
@@ -553,16 +564,16 @@ func (s *service) Handle(
 	// the payload object. For more information, see the "pull request review
 	// comments" REST API.
 	case *github.PullRequestReviewCommentEvent:
-		brigadeEvent.Type =
-			fmt.Sprintf("pull_request_review_comment:%s", e.GetAction())
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type =
+			fmt.Sprintf("pull_request_review_comment:%s", webhook.GetAction())
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
-		brigadeEvent.ShortTitle, brigadeEvent.LongTitle =
-			getTitlesFromPR(e.GetPullRequest())
-		brigadeEvent.Git = &core.GitDetails{
-			Commit: e.GetPullRequest().GetHead().GetSHA(),
-			Ref:    fmt.Sprintf("refs/pull/%d/head", e.GetPullRequest().GetNumber()),
+		event.ShortTitle, event.LongTitle =
+			getTitlesFromPR(webhook.GetPullRequest())
+		event.Git = &core.GitDetails{
+			Commit: webhook.GetPullRequest().GetHead().GetSHA(),
+			Ref:    fmt.Sprintf("refs/pull/%d/head", webhook.GetPullRequest().GetNumber()),
 		}
 
 	// nolint: lll
@@ -570,20 +581,20 @@ func (s *service) Handle(
 	//
 	// One or more commits are pushed to a repository branch or tag.
 	case *github.PushEvent:
-		brigadeEvent.Type = "push"
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = "push"
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
-		brigadeEvent.ShortTitle, brigadeEvent.LongTitle = getTitlesFromPushEvent(e)
-		brigadeEvent.Git = &core.GitDetails{
-			Commit: e.GetHeadCommit().GetID(),
-			Ref:    e.GetRef(),
+		event.ShortTitle, event.LongTitle = getTitlesFromPushWebhook(webhook)
+		event.Git = &core.GitDetails{
+			Commit: webhook.GetHeadCommit().GetID(),
+			Ref:    webhook.GetRef(),
 		}
-		if e.GetDeleted() {
+		if webhook.GetDeleted() {
 			// If this is a branch or tag deletion, emit a `push:delete` event
-			// instead and blank out the brigadeEvent.Git.
-			brigadeEvent.Type = "push:delete"
-			brigadeEvent.Git = nil
+			// instead and blank out event.Git.
+			event.Type = "push:delete"
+			event.Git = nil
 		}
 
 	// nolint: lll
@@ -593,12 +604,12 @@ func (s *service) Handle(
 	// action property of the payload object. For more information, see the
 	// "releases" REST API.
 	case *github.ReleaseEvent:
-		brigadeEvent.Type = fmt.Sprintf("release:%s", e.GetAction())
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = fmt.Sprintf("release:%s", webhook.GetAction())
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
-		brigadeEvent.Git = &core.GitDetails{
-			Ref: e.GetRelease().GetTagName(),
+		event.Git = &core.GitDetails{
+			Ref: webhook.GetRelease().GetTagName(),
 		}
 
 	// nolint: lll
@@ -608,9 +619,9 @@ func (s *service) Handle(
 	// action property of the payload object. For more information, see the
 	// "repositories" REST API.
 	case *github.RepositoryEvent:
-		brigadeEvent.Type = fmt.Sprintf("repository:%s", e.GetAction())
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = fmt.Sprintf("repository:%s", webhook.GetAction())
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
 
 	// nolint: lll
@@ -620,25 +631,27 @@ func (s *service) Handle(
 	// // specified in the action property of the payload object. For more
 	// // information, see the "starring" REST API.
 	// case *github.StarEvent:
-	// 	brigadeEvent.Type = fmt.Sprintf("star:%s", e.GetAction())
-	// 	brigadeEvent.Qualifiers = map[string]string{
+	// 	event.Type = fmt.Sprintf("star:%s", w.GetAction())
+	// 	event.Qualifiers = map[string]string{
 	// 		// TODO: StarEvent is missing the repo property. We can add support
-	// 		// for this event after opening a PR upstream (or determining that the
+	// 		// for this webhook after opening a PR upstream (or determining that the
 	// 		// error is in the documentation, which is a possibility).
-	// 		"repo": e.GetRepo().GetFullName(),
+	// 		"repo": w.GetRepo().GetFullName(),
 	// 	}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#status
 	//
-	// When the status of a Git commit changes. The type of activity is specified in the action property of the payload object. For more information, see the "statuses" REST API.
+	// When the status of a Git commit changes. The type of activity is specified
+	// in the action property of the payload object. For more information, see the
+	// "statuses" REST API.
 	case *github.StatusEvent:
-		brigadeEvent.Type = "status"
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = "status"
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
-		brigadeEvent.Git = &core.GitDetails{
-			Commit: e.GetCommit().GetSHA(),
+		event.Git = &core.GitDetails{
+			Commit: webhook.GetCommit().GetSHA(),
 		}
 
 	// nolint: lll
@@ -646,9 +659,9 @@ func (s *service) Handle(
 	//
 	// When a repository is added to a team.
 	case *github.TeamAddEvent:
-		brigadeEvent.Type = "team_add"
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = "team_add"
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
 
 	// nolint: lll
@@ -664,16 +677,16 @@ func (s *service) Handle(
 	// See https://developer.github.com/changes/2012-09-05-watcher-api/ for
 	// more information.
 	case *github.WatchEvent:
-		brigadeEvent.Type = fmt.Sprintf("watch:%s", e.GetAction())
-		brigadeEvent.Qualifiers = map[string]string{
-			"repo": e.GetRepo().GetFullName(),
+		event.Type = fmt.Sprintf("watch:%s", webhook.GetAction())
+		event.Qualifiers = map[string]string{
+			"repo": webhook.GetRepo().GetFullName(),
 		}
 
 	default:
 		return events, nil
 	}
 
-	events, err = s.eventsClient.Create(ctx, brigadeEvent)
+	events, err = s.eventsClient.Create(ctx, event)
 	if err != nil {
 		return events, errors.Wrap(err, "error emitting event(s) into Brigade")
 	}
@@ -693,9 +706,9 @@ func (s *service) isAllowedAuthorAssociation(authorAssociation string) bool {
 	return false
 }
 
-// getTitlesFromPushEvent extracts human-readable event titles from a
+// getTitlesFromPushWebhook extracts human-readable titles from a
 // github.PushEvent.
-func getTitlesFromPushEvent(pe *github.PushEvent) (string, string) {
+func getTitlesFromPushWebhook(pe *github.PushEvent) (string, string) {
 	var shortTitle, longTitle string
 	if pe != nil && pe.Ref != nil {
 		if refSubmatches :=
@@ -711,7 +724,7 @@ func getTitlesFromPushEvent(pe *github.PushEvent) (string, string) {
 	return shortTitle, longTitle
 }
 
-// getTitlesFromPR extracts human-readable event titles from a
+// getTitlesFromPR extracts human-readable titles from a
 // github.PullRequest.
 func getTitlesFromPR(pr *github.PullRequest) (string, string) {
 	var shortTitle, longTitle string
@@ -724,9 +737,9 @@ func getTitlesFromPR(pr *github.PullRequest) (string, string) {
 	return shortTitle, longTitle
 }
 
-// getPRFromIssueCommentEvent retrieves the github.PullRequest associated with a
-// given github.IssueCommentEvent.
-func (s *service) getPRFromIssueCommentEvent(
+// getPRFromIssueCommentWebhook retrieves the github.PullRequest associated with
+// a given github.IssueCommentEvent.
+func (s *service) getPRFromIssueCommentWebhook(
 	ctx context.Context,
 	app ghlib.App,
 	ice github.IssueCommentEvent,
