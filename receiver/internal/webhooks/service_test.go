@@ -170,10 +170,21 @@ func TestHandle(t *testing.T) {
 			},
 			assertions: func(events core.EventList, err error) {
 				require.NoError(t, err)
-				require.Len(t, events.Items, 1)
+				require.Len(t, events.Items, 2)
 				event := events.Items[0]
 				require.Equal(t, "foo", event.ProjectID)
 				require.Equal(t, "check_run:rerequested", event.Type)
+				require.Equal(
+					t,
+					core.GitDetails{
+						Commit: testSHA,
+						Ref:    testBranch,
+					},
+					*event.Git,
+				)
+				event = events.Items[1]
+				require.Equal(t, "foo", event.ProjectID)
+				require.Equal(t, "ci_job:requested", event.Type)
 				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
@@ -219,9 +230,19 @@ func TestHandle(t *testing.T) {
 			},
 			assertions: func(events core.EventList, err error) {
 				require.NoError(t, err)
-				require.Len(t, events.Items, 1)
+				require.Len(t, events.Items, 2)
 				event := events.Items[0]
 				require.Equal(t, "check_suite:requested", event.Type)
+				require.Equal(
+					t,
+					core.GitDetails{
+						Commit: testSHA,
+						Ref:    testBranch,
+					},
+					*event.Git,
+				)
+				event = events.Items[1]
+				require.Equal(t, "ci_pipeline:requested", event.Type)
 				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
@@ -1174,7 +1195,7 @@ func TestHandle(t *testing.T) {
 			webhookBytes: func() []byte {
 				bytes, err := json.Marshal(
 					&github.ReleaseEvent{
-						Action: testGenericAction,
+						Action: github.String("published"),
 						Repo:   testRepo,
 						Release: &github.RepositoryRelease{
 							TagName: github.String("v0.1.0"),
@@ -1200,10 +1221,18 @@ func TestHandle(t *testing.T) {
 			},
 			assertions: func(events core.EventList, err error) {
 				require.NoError(t, err)
-				require.Len(t, events.Items, 1)
+				require.Len(t, events.Items, 2)
 				event := events.Items[0]
-				require.Equal(t, "release:foo", event.Type)
-				require.Equal(t, testQualifiers, event.Qualifiers)
+				require.Equal(t, "release:published", event.Type)
+				require.Equal(
+					t,
+					core.GitDetails{
+						Ref: "v0.1.0",
+					},
+					*event.Git,
+				)
+				event = events.Items[1]
+				require.Equal(t, "cd_pipeline:requested", event.Type)
 				require.Equal(
 					t,
 					core.GitDetails{

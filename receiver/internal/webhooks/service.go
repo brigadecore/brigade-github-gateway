@@ -157,8 +157,7 @@ func (s *service) Handle(
 			Commit: webhook.GetCheckSuite().GetHeadSHA(),
 			Ref:    webhook.GetCheckSuite().GetHeadBranch(),
 		}
-		if webhook.GetAction() == "requested" ||
-			webhook.GetAction() == "rerequested" {
+		if webhook.GetAction() == "requested" || webhook.GetAction() == "rerequested" { // nolint: lll
 			event.SourceState = &core.SourceState{
 				State: map[string]string{
 					"tracking": "true",
@@ -638,6 +637,12 @@ func (s *service) Handle(
 			"repo": webhook.GetRepo().GetFullName(),
 		}
 		eventsToEmit = []core.Event{event}
+	}
+
+	for _, event = range eventsToEmit {
+		if ciCDEvent := s.getCICDEvent(event); ciCDEvent != nil {
+			eventsToEmit = append(eventsToEmit, *ciCDEvent)
+		}
 	}
 
 	for _, event = range eventsToEmit {
