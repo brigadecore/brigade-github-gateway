@@ -40,10 +40,6 @@ func webhookServiceConfig() (webhooks.ServiceConfig, error) {
 			"CHECK_SUITE_ALLOWED_AUTHOR_ASSOCIATIONS",
 			[]string{},
 		),
-		EmittedEvents: os.GetStringSliceFromEnvVar(
-			"EMITTED_EVENTS",
-			[]string{"*"},
-		),
 	}
 	var err error
 	githubAppsPath, err := os.GetRequiredEnvVar("GITHUB_APPS_PATH")
@@ -68,13 +64,7 @@ func webhookServiceConfig() (webhooks.ServiceConfig, error) {
 	for _, githubApp := range githubApps {
 		config.GitHubApps[githubApp.AppID] = githubApp
 	}
-	if config.CheckSuiteOnPR, err =
-		os.GetBoolFromEnvVar("CHECK_SUITE_ON_PR", true); err != nil {
-		return config, err
-	}
-	config.CheckSuiteOnComment, err =
-		os.GetBoolFromEnvVar("CHECK_SUITE_ON_COMMENT", true)
-	return config, err
+	return config, nil
 }
 
 // signatureVerificationFilterConfig populates configuration for the signature

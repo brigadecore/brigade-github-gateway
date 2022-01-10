@@ -30,29 +30,6 @@ type ServiceConfig struct {
 	// COLLABORATOR, CONTRIBUTOR, OWNER, NONE, MEMBER, FIRST_TIMER, and
 	// FIRST_TME_CONTRIBUTOR.
 	CheckSuiteAllowedAuthorAssociations []string
-	// CheckSuiteOnPR specifies whether eligible PR events (see
-	// CheckSuiteAllowedAuthorAssociations) should trigger a corresponding suite
-	// of checks. Note that GitHub AUTOMATICALLY triggers such suites in response
-	// to push events, but as a security measure, does NOT do so for PR events,
-	// given that a PR may have originated from an untrusted user. Setting this
-	// field to true, when used in conjunction with the
-	// CheckSuiteAllowedAuthorAssociations field allows classes of trusted user
-	// (only) to have their PRs trigger check suites automatically.
-	CheckSuiteOnPR bool
-	// CheckSuiteOnComment specifies whether eligible comments (ones containing
-	// the text "/brig check" or "/brig run") should trigger a corresponding suite
-	// of checks. Note that this privilege is extended only to trusted classes of
-	// user specified by the CheckSuiteAllowedAuthorAssociations field.
-	CheckSuiteOnComment bool
-	// EmittedEvents enumerates specific event types that, when received by the
-	// gateway, should be emitted into Brigade's event bus. The value "*" can be
-	// used to indicate "all events." ONLY specified events are emitted. i.e. An
-	// empty list in this field will result in NO EVENTS being emitted into
-	// Brigade's event bus. This field is one of several useful controls for
-	// cutting down on the amount of noise that this gateway propagates into
-	// Brigade's event bus. (Another would be to configure the Brigade App itself
-	// to only send specific events to this gateway.)
-	EmittedEvents []string
 }
 
 // Service is an interface for components that can handle webhooks (events) from
@@ -282,18 +259,16 @@ func (s *service) Handle(
 		// Special handling for this event type-- an installation can affect
 		// multiple repos, so we'll iterate over all affected repos to propagate
 		// events for each into Brigade.
-		if s.shouldEmit(brigadeEvent.Type) {
-			for _, repo := range e.Repositories {
-				brigadeEvent.Qualifiers = map[string]string{
-					"repo": repo.GetFullName(),
-				}
-				var tmpEvents core.EventList
-				tmpEvents, err = s.eventsClient.Create(ctx, brigadeEvent)
-				events.Items = append(events.Items, tmpEvents.Items...)
-				if err != nil {
-					return events,
-						errors.Wrap(err, "error emitting event(s) into Brigade")
-				}
+		for _, repo := range e.Repositories {
+			brigadeEvent.Qualifiers = map[string]string{
+				"repo": repo.GetFullName(),
+			}
+			var tmpEvents core.EventList
+			tmpEvents, err = s.eventsClient.Create(ctx, brigadeEvent)
+			events.Items = append(events.Items, tmpEvents.Items...)
+			if err != nil {
+				return events,
+					errors.Wrap(err, "error emitting event(s) into Brigade")
 			}
 		}
 		return events, nil // We're done
@@ -310,22 +285,20 @@ func (s *service) Handle(
 		// Special handling for this event type-- this event can affect multiple
 		// repos, so we'll iterate over all affected repos to propagate events for
 		// each into Brigade.
-		if s.shouldEmit(brigadeEvent.Type) {
-			repos := e.RepositoriesAdded
-			if e.GetAction() == "removed" {
-				repos = e.RepositoriesRemoved
+		repos := e.RepositoriesAdded
+		if e.GetAction() == "removed" {
+			repos = e.RepositoriesRemoved
+		}
+		for _, repo := range repos {
+			brigadeEvent.Qualifiers = map[string]string{
+				"repo": repo.GetFullName(),
 			}
-			for _, repo := range repos {
-				brigadeEvent.Qualifiers = map[string]string{
-					"repo": repo.GetFullName(),
-				}
-				var tmpEvents core.EventList
-				tmpEvents, err = s.eventsClient.Create(ctx, brigadeEvent)
-				events.Items = append(events.Items, tmpEvents.Items...)
-				if err != nil {
-					return events,
-						errors.Wrap(err, "error emitting event(s) into Brigade")
-				}
+			var tmpEvents core.EventList
+			tmpEvents, err = s.eventsClient.Create(ctx, brigadeEvent)
+			events.Items = append(events.Items, tmpEvents.Items...)
+			if err != nil {
+				return events,
+					errors.Wrap(err, "error emitting event(s) into Brigade")
 			}
 		}
 		return events, nil // We're done
@@ -351,7 +324,6 @@ func (s *service) Handle(
 		comment := strings.ToLower(e.GetComment().GetBody())
 		if e.GetIssue().IsPullRequest() && e.GetAction() == "created" &&
 			(strings.Contains(comment, "/brig check") || strings.Contains(comment, "/brig run")) && // nolint: lll
-			s.config.CheckSuiteOnComment &&
 			s.isAllowedAuthorAssociation(e.GetComment().GetAuthorAssociation()) {
 			var pr *github.PullRequest
 			if pr, err = s.getPRFromIssueCommentEvent(
@@ -525,8 +497,7 @@ func (s *service) Handle(
 		// 4. The PR's author is allowed to request a check suite
 		switch e.GetAction() {
 		case "opened", "synchronize", "reopened":
-			if s.config.CheckSuiteOnPR &&
-				e.GetPullRequest().GetHead().GetRepo().GetFork() &&
+			if e.GetPullRequest().GetHead().GetRepo().GetFork() &&
 				s.isAllowedAuthorAssociation(e.GetPullRequest().GetAuthorAssociation()) {
 				if err = s.requestCheckSuite(
 					ctx,
@@ -689,11 +660,9 @@ func (s *service) Handle(
 		return events, nil
 	}
 
-	if s.shouldEmit(brigadeEvent.Type) {
-		events, err = s.eventsClient.Create(ctx, brigadeEvent)
-		if err != nil {
-			return events, errors.Wrap(err, "error emitting event(s) into Brigade")
-		}
+	events, err = s.eventsClient.Create(ctx, brigadeEvent)
+	if err != nil {
+		return events, errors.Wrap(err, "error emitting event(s) into Brigade")
 	}
 
 	return events, nil
@@ -705,19 +674,6 @@ func (s *service) Handle(
 func (s *service) isAllowedAuthorAssociation(authorAssociation string) bool {
 	for _, a := range s.config.CheckSuiteAllowedAuthorAssociations {
 		if a == authorAssociation {
-			return true
-		}
-	}
-	return false
-}
-
-// shouldEmit makes a determination whether the specified event type is eligible
-// to be emitted into Brigade's event bus.
-func (s *service) shouldEmit(eventType string) bool {
-	unqualifiedEventType := strings.Split(eventType, ":")[0]
-	for _, emitableEvent := range s.config.EmittedEvents {
-		if eventType == emitableEvent || unqualifiedEventType == emitableEvent ||
-			emitableEvent == "*" {
 			return true
 		}
 	}

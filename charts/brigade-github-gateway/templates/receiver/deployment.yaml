@@ -79,10 +79,6 @@ spec:
         - name: TLS_KEY_PATH
           value: /app/certs/tls.key
         {{- end }}
-        - name: CHECK_SUITE_ON_PR
-          value: {{ quote .Values.receiver.github.checkSuite.onPR }}
-        - name: CHECK_SUITE_ON_COMMENT
-          value: {{ quote .Values.receiver.github.checkSuite.onComment }}
         - name: API_ADDRESS
           value: {{ .Values.brigade.apiAddress }}
         - name: API_TOKEN
@@ -97,10 +93,6 @@ spec:
         {{ if .Values.receiver.github.checkSuite.allowedAuthorAssociations }}
         - name: CHECK_SUITE_ALLOWED_AUTHOR_ASSOCIATIONS
           value: {{ join "," .Values.receiver.github.checkSuite.allowedAuthorAssociations | quote }}
-        {{ end }}
-        {{ if .Values.receiver.brigade.emittedEvents }}
-        - name: EMITTED_EVENTS
-          value: {{ join "," .Values.receiver.brigade.emittedEvents | quote }}
         {{ end }}
         volumeMounts:
         {{- if .Values.receiver.tls.enabled }}
