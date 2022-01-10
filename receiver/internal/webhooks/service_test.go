@@ -108,6 +108,34 @@ func TestHandle(t *testing.T) {
 		},
 
 		{
+			name:      "check_run event with unparsable name",
+			eventType: "check_run",
+			eventBytes: func() []byte {
+				bytes, err := json.Marshal(
+					&github.CheckRunEvent{
+						Action: github.String("rerequested"),
+						Repo:   testRepo,
+						CheckRun: &github.CheckRun{
+							// The check run name below is not of the form <project:job name>
+							Name: github.String("foo"),
+							CheckSuite: &github.CheckSuite{
+								HeadSHA:    github.String(testSHA),
+								HeadBranch: github.String(testBranch),
+							},
+						},
+					},
+				)
+				require.NoError(t, err)
+				return bytes
+			},
+			service: &service{},
+			assertions: func(events core.EventList, err error) {
+				require.NoError(t, err)
+				require.Empty(t, events.Items)
+			},
+		},
+
+		{
 			name:      "check_run event",
 			eventType: "check_run",
 			eventBytes: func() []byte {
@@ -116,6 +144,7 @@ func TestHandle(t *testing.T) {
 						Action: github.String("rerequested"),
 						Repo:   testRepo,
 						CheckRun: &github.CheckRun{
+							Name: github.String("foo:bar"),
 							CheckSuite: &github.CheckSuite{
 								HeadSHA:    github.String(testSHA),
 								HeadBranch: github.String(testBranch),
@@ -144,6 +173,7 @@ func TestHandle(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
+				require.Equal(t, "foo", event.ProjectID)
 				require.Equal(t, "check_run:rerequested", event.Type)
 				require.Equal(
 					t,

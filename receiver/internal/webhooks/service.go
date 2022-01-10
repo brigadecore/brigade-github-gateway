@@ -97,6 +97,19 @@ func (s *service) Handle(
 	// action property of the payload object. For more information, see the "check
 	// runs" REST API.
 	case *github.CheckRunEvent:
+		// A request to re-run a check should be delivered only to the Brigade
+		// project that created the corresponding job in the first place, so here we
+		// attempt to determine the name of that project.
+		jobNameTokens := strings.SplitN(e.GetCheckRun().GetName(), ":", 2)
+		if len(jobNameTokens) != 2 {
+			log.Printf(
+				"warning: could not process checkrun:rerequested webhook for job %q",
+				e.GetCheckRun().GetName(),
+			)
+			return events, nil
+		}
+		// NOTE: Targeting a specific project requires Brigade v2.2.0+
+		brigadeEvent.ProjectID = jobNameTokens[0]
 		brigadeEvent.Type = fmt.Sprintf("check_run:%s", e.GetAction())
 		brigadeEvent.Qualifiers = map[string]string{
 			"repo": e.GetRepo().GetFullName(),
