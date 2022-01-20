@@ -135,7 +135,7 @@ will be the third-party.
 
    > ⚠️&nbsp;&nbsp;The `--source brigade.sh/github` option specifies that this
    > service account can be used _only_ to create events having a value of
-   > `brigade.sh/github` in the event's `source` field. _This is a security
+   > `brigade.sh/github` in the event's `source` field. This is a security
    > measure that prevents the gateway from using this token for impersonating
    > other gateways.
 
@@ -173,7 +173,7 @@ will be the third-party.
        App.
 
      * `apiKey`: Set this to the private key you created and downloaded after
-       creating your GitHub App. The value should, begin with
+       creating your GitHub App. The value should begin with
        `-----BEGIN RSA PRIVATE KEY-----` and end with
        `-----END RSA PRIVATE KEY-----`. All line breaks should be preserved
        and the beginning of each line should be indented exactly four spaces.

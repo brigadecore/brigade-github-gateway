@@ -43,7 +43,7 @@ GitHub App, `pull_request` webhooks with action `opened` _are_ sent.
 
 When this gateway receives a `pull_request` webhook with a value of `opened`,
 `reopened`, or `synchronized` in the JSON payload's `action` field, it further
-scrutinized the JSON payload to determine the PR author's relationship to the
+scrutinizes the JSON payload to determine the PR author's relationship to the
 target repository. If the author is determined to be a trusted contributor (an
 `OWNER` of the repository, for instance), the gateway uses the GitHub Checks API
 to create a check suite and request that a `check_suite` webhook with action
@@ -72,7 +72,7 @@ the check suite forwarding process proceeds as if the comment author had
 authored the PR themselves.
 
 > ⚠️&nbsp;&nbsp;For check suite forwarding to work for `/brig run` or `/brig
-> check` comments, your your GitHub App should be subscribed to `issue_comment`
+> check` comments, your GitHub App should be subscribed to `issue_comment`
 > webhooks, but there is no need for Brigade projects to subscribe to
 > `issue_comment:created` events. Check suite forwarding is purely a function of
 > the gateway and individual projects do not need to do anything to enable it.
@@ -113,15 +113,14 @@ can be readily understood.
 Since script authors rarely, if ever, need to differentiate between a
 `check_suite:requested` event and a `check_suite:rerequested` event, when
 emitting either of these into Brigade's event bus, this gateway _also_ emits a
-`ci_pipeline:requested` requested event. Apart from effectively collapsing two
-similarly named and nearly identical events into one, the name
-`ci_pipeline:requested` very clearly denotes exactly what any subscribed
-project's script should do to handle such an event -- namely, run the CI
-pipeline. Better still, it eliminates any potential confusion arising from
-questions like, "What even is a check suite?" Since the gateway can handle such
-things all on its own, it is perhaps better for Brigade's end-users not to get
-bogged down in such details and simply focus on the fact that a
-`ci_pipeline:requested` event means CI should run.
+`ci_pipeline:requested` event. Apart from effectively collapsing two similarly
+named and nearly identical events into one, the name `ci_pipeline:requested`
+very clearly denotes exactly what any subscribed project's script should do to
+handle such an event -- namely, run the CI pipeline. Better still, it eliminates
+any potential confusion arising from questions like, "What even is a check
+suite?" Since the gateway can handle such things all on its own, it is perhaps
+better for Brigade's end-users not to get bogged down in such details and simply
+focus on the fact that a `ci_pipeline:requested` event means CI should run.
 
 Again, to help end-users avoid getting bogged down in the complexities of things
 such as the GitHub Checks API, when emitting a `check_run:rerequested` event,
@@ -218,7 +217,7 @@ events.process()
 ```
 
 Unaccounted for in the script above are `ci_job:requested` events that indicate
-that a specific job, should be re-run. Modifying the previous script slightly,
+that a specific job should be re-run. Modifying the previous script slightly,
 we can account for such events. The strategy makes use of a map of job factory
 functions indexed by name:
 
