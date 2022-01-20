@@ -45,7 +45,7 @@ subject to a few very simple rules:
 
     2. Promotes the ref to the `ref` label on the corresponding event. This
        permits projects to, for instance, subscribe only to events relating
-       to specific a specific branch. Read more about labels
+       to a specific branch. Read more about labels
        [here](https://docs.brigade.sh/topics/project-developers/events/#labels).
 
 1. If this gateway is able to infer that a webhook pertains only to a _specific_
@@ -77,7 +77,7 @@ gateway and the corresponding event(s) that are emitted into Brigade's event bus
 | Webhook | Scope | Possible Action Values | Event Type(s) Emitted |
 |---------|-------|------------------------|-----------------------|
 | [`check_run`](https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#check_run) | specific commit | <ul><li>`created`</li><li>`completed`</li><li>`rerequested`</li><li>`rerequested_action`</li></ul> | <ul><li>`check_run:created`</li><li>`check_run:completed`</li><li>`check_run:rerequested` + ⭐️&nbsp;&nbsp;`ci_job:requested`</li><li>`check_run:rerequested_action`</li></ul>
-| [`check_suite`](https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#check_suite) | specific commit | <ul><li>`completed`</li><li>`requested`</li><li>`rerequested`</li></ul> | <ul><li>`check_suite:completed`</li><li>`check_suite:requested` + `ci_pipeline:requested`</li><li>⭐️&nbsp;&nbsp;`check_suite:rerequested` + `ci_pipeline:requested`</li></ul>
+| [`check_suite`](https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#check_suite) | specific commit | <ul><li>`completed`</li><li>`requested`</li><li>`rerequested`</li></ul> | <ul><li>`check_suite:completed`</li><li>`check_suite:requested` + `ci_pipeline:requested`</li><li>`check_suite:rerequested` + ⭐️&nbsp;&nbsp;`ci_pipeline:requested`</li></ul>
 | [`create`](https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#create) | specific branch or tag || <ul><li>`create`</li></ul>
 | [`deleted`](https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#delete) | specific branch or tag || <ul><li>`deleted`</li></ul>
 | [`fork`](https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#fork) | specific repository || <ul><li>`fork`</li></ul>
