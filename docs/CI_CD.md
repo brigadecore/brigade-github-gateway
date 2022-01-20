@@ -162,7 +162,7 @@ Gateway.
 
 ### Project Definition:
 
-TODO: Still need some test here to introduce the example:
+Our project definition only needs to subscribe to three specific events:
 
 ```yaml
 apiVersion: brigade.sh/v2
@@ -186,7 +186,8 @@ spec:
 
 ### Script
 
-TODO: Still need some test here to introduce the example:
+In a first iteration of our script, we define how to handle two of the three
+events to which we subscribed:
 
 ```typescript
 import { events, Event, Job, ConcurrentGroup, Container } from "@brigadecore/brigadier"
@@ -216,10 +217,10 @@ events.on("brigade.sh/github", "cd_pipeline:requested", async event => {
 events.process()
 ```
 
-Unaccounted for in the script above are `ci_job:requested` events that indicate
-that a specific job should be re-run. Modifying the previous script slightly,
-we can account for such events. The strategy makes use of a map of job factory
-functions indexed by name:
+Unaccounted for in the first iteration of our script are `ci_job:requested`
+events which indicate that a specific job should be re-run. Modifying the
+previous script slightly, we can account for such events. The strategy makes use
+of a map of job factory functions indexed by name:
 
 ```typescript
 import { events, Event, Job, ConcurrentGroup, Container } from "@brigadecore/brigadier"
@@ -249,7 +250,8 @@ events.on("brigade.sh/github", "ci_pipeline:requested", async event => {
 })
 
 events.on("brigade.sh/github", "ci_job:requested", async event => {
-  // The job name can be found in a label
+  // Starting with Brigade/brigadier v2.2.0, the job name can be found in a
+  // label. Prior to that, an event's labels were not accessible via script.
   const job = jobs[event.labels.job]
   if (job) {
     await job(event).run()
