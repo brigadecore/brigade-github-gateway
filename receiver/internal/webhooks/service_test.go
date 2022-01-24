@@ -184,7 +184,7 @@ func TestHandle(t *testing.T) {
 				)
 				event = events.Items[1]
 				require.Equal(t, "foo", event.ProjectID)
-				require.Equal(t, "ci_job:requested", event.Type)
+				require.Equal(t, "ci:job_requested", event.Type)
 				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
@@ -242,7 +242,7 @@ func TestHandle(t *testing.T) {
 					*event.Git,
 				)
 				event = events.Items[1]
-				require.Equal(t, "ci_pipeline:requested", event.Type)
+				require.Equal(t, "ci:pipeline_requested", event.Type)
 				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
@@ -1232,7 +1232,7 @@ func TestHandle(t *testing.T) {
 					*event.Git,
 				)
 				event = events.Items[1]
-				require.Equal(t, "cd_pipeline:requested", event.Type)
+				require.Equal(t, "cd:pipeline_requested", event.Type)
 				require.Equal(
 					t,
 					core.GitDetails{

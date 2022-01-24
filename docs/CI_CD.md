@@ -113,29 +113,29 @@ can be readily understood.
 Since script authors rarely, if ever, need to differentiate between a
 `check_suite:requested` event and a `check_suite:rerequested` event, when
 emitting either of these into Brigade's event bus, this gateway _also_ emits a
-`ci_pipeline:requested` event. Apart from effectively collapsing two similarly
-named and nearly identical events into one, the name `ci_pipeline:requested`
+`ci:pipeline_requested` event. Apart from effectively collapsing two similarly
+named and nearly identical events into one, the name `ci:pipeline_requested`
 very clearly denotes exactly what any subscribed project's script should do to
 handle such an event -- namely, run the CI pipeline. Better still, it eliminates
 any potential confusion arising from questions like, "What even is a check
 suite?" Since the gateway can handle such things all on its own, it is perhaps
 better for Brigade's end-users not to get bogged down in such details and simply
-focus on the fact that a `ci_pipeline:requested` event means CI should run.
+focus on the fact that a `ci:pipeline_requested` event means CI should run.
 
 Again, to help end-users avoid getting bogged down in the complexities of things
 such as the GitHub Checks API, when emitting a `check_run:rerequested` event,
-this gateway will _also_ emit a `ci_job:requested`. Again, this name clearly
+this gateway will _also_ emit a `ci:job_requested`. Again, this name clearly
 denotes exactly what any subscribed project's script should do to handle such an
 event -- namely, run some discreet segment of the CI pipeline. As an added
-convenience, `ci_job:requested` events have a `job` label that indicates _which_
+convenience, `ci:job_requested` events have a `job` label that indicates _which_
 specific job is to be re-run. This spares script authors from digging into the
 event payload to make this determination.
 
-Last, and primarily for consistency with the `ci_pipeline:requested` and
-`ci_job:requested` names, when emitting a `release:published` event, this
-gateway will _also_ emit a `cd_pipeline:requested` event. Once again, this name
+Last, and primarily for consistency with the `ci:pipeline_requested` and
+`ci:job_requested` names, when emitting a `release:published` event, this
+gateway will _also_ emit a `cd:pipeline_requested` event. Once again, this name
 clearly denotes exactly what any subscribed project's script should do in
-response to such an event. As an added convenience, `cd_pipeline:requested` have
+response to such an event. As an added convenience, `cd:pipeline_requested` have
 a `release` label that indicates the release name. This spares script authors
 from inferring this information themselves by digging into the event payload or
 other event details.
@@ -151,9 +151,9 @@ To summarize, the existence of the custom events discussed in this section
 means that script authors who are concerned only with CI/CD need only concern
 themselves with the following three events:
 
-* `ci_pipeline:requested`
-* `ci_job:requested`
-* `cd_pipeline:requested`
+* `ci:pipeline_requested`
+* `ci:job_requested`
+* `cd:pipeline_requested`
 
 ## CI/CD Recipe
 
@@ -176,9 +176,9 @@ spec:
     qualifiers:
       repo: brigadecore/ci-cd-example
     types:
-    - ci_pipeline:requested
-    - ci_job:requested
-    - cd_pipeline:requested
+    - ci:pipeline_requested
+    - ci:job_requested
+    - cd:pipeline_requested
   workerTemplate:
     git:
       cloneURL: https://github.com/brigadecore/ci-cd-example.git
@@ -192,7 +192,7 @@ events to which we subscribed:
 ```typescript
 import { events, Event, Job, ConcurrentGroup, Container } from "@brigadecore/brigadier"
 
-events.on("brigade.sh/github", "ci_pipeline:requested", async event => {
+events.on("brigade.sh/github", "ci:pipeline_requested", async event => {
   // Chain some jobs together to implement CI. For example:
   await new ConcurrentGroup(
     // For brevity, we're omitting the definitions of each job.
@@ -203,7 +203,7 @@ events.on("brigade.sh/github", "ci_pipeline:requested", async event => {
   ).run()
 })
 
-events.on("brigade.sh/github", "cd_pipeline:requested", async event => {
+events.on("brigade.sh/github", "cd:pipeline_requested", async event => {
   // Chain some jobs together to implement CD. For example:
   await new ConcurrentGroup(
     // For brevity, we're omitting the definitions of each job.
@@ -217,7 +217,7 @@ events.on("brigade.sh/github", "cd_pipeline:requested", async event => {
 events.process()
 ```
 
-Unaccounted for in the first iteration of our script are `ci_job:requested`
+Unaccounted for in the first iteration of our script are `ci:job_requested`
 events which indicate that a specific job should be re-run. Modifying the
 previous script slightly, we can account for such events. The strategy makes use
 of a map of job factory functions indexed by name:
@@ -225,7 +225,7 @@ of a map of job factory functions indexed by name:
 ```typescript
 import { events, Event, Job, ConcurrentGroup, Container } from "@brigadecore/brigadier"
 
-// A map of job factory functions indexed by name. When a ci_job:requested
+// A map of job factory functions indexed by name. When a ci:job_requested
 // event wants to re-run a single job, this allows us to easily find it.
 const jobs: {[key: string]: (event: Event) => Job } = {}
 
@@ -239,7 +239,7 @@ jobs[testJob0Name] = testJob0
 
 // ...
 
-events.on("brigade.sh/github", "ci_pipeline:requested", async event => {
+events.on("brigade.sh/github", "ci:pipeline_requested", async event => {
   // Chain some jobs together to implement CI. For example:
   await new ConcurrentGroup(
     testJob0(event),
@@ -249,7 +249,7 @@ events.on("brigade.sh/github", "ci_pipeline:requested", async event => {
   ).run()
 })
 
-events.on("brigade.sh/github", "ci_job:requested", async event => {
+events.on("brigade.sh/github", "ci:job_requested", async event => {
   // Starting with Brigade/brigadier v2.2.0, the job name can be found in a
   // label. Prior to that, an event's labels were not accessible via script.
   const job = jobs[event.labels.job]
@@ -260,7 +260,7 @@ events.on("brigade.sh/github", "ci_job:requested", async event => {
   throw new Error(`No job found with name: ${event.labels.job}`)
 })
 
-events.on("brigade.sh/github", "cd_pipeline:requested", async event => {
+events.on("brigade.sh/github", "cd:pipeline_requested", async event => {
   // Chain some jobs together to implement CD. For example:
   await new ConcurrentGroup(
     releaseJob0(event),
