@@ -156,7 +156,7 @@ will be the third-party.
 
    ```console
    $ helm inspect values oci://ghcr.io/brigadecore/brigade-github-gateway \
-       --version v0.5.0 > ~/brigade-github-gateway-values.yaml
+       --version v0.6.0 > ~/brigade-github-gateway-values.yaml
    ```
 
 1. Edit `~/brigade-github-gateway-values.yaml`, making the following changes:
@@ -207,7 +207,7 @@ will be the third-party.
    ```console
    $ helm install brigade-github-gateway \
        oci://ghcr.io/brigadecore/brigade-github-gateway \
-       --version v0.5.0 \
+       --version v0.6.0 \
        --create-namespace \
        --namespace brigade-github-gateway \
        --values ~/brigade-github-gateway-values.yaml \
