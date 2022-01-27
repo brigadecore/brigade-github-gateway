@@ -188,6 +188,14 @@ func TestHandle(t *testing.T) {
 				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
+					map[string]string{
+						"appID": "42",
+						"job":   "bar",
+					},
+					event.Labels,
+				)
+				require.Equal(
+					t,
 					core.GitDetails{
 						Commit: testSHA,
 						Ref:    testBranch,
