@@ -88,7 +88,7 @@ course of handling the event.
 * [Installation](docs/INSTALLATION.md): Check this out if you're an operator who
   wants to integrate GitHub with your Brigade installation.
 * [Implementing CI/CD](docs/CI_CD.md): Check this out if you're a script author
-  interested in this gateway's most common use case: Enabling you do define
+  interested in this gateway's most common use case: Enabling you to define
   and execute CI/CD pipelines in Brigade.
 * [Event Reference](docs/EVENT_REFERENCE.md): Check this out if you're a script
   author or contributor who requires detailed information about all the webhooks
