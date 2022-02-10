@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/brigadecore/brigade/sdk/v2/core"
-	coreTesting "github.com/brigadecore/brigade/sdk/v2/testing/core"
+	"github.com/brigadecore/brigade/sdk/v3"
+	sdkTesting "github.com/brigadecore/brigade/sdk/v3/testing"
 	"github.com/google/go-github/v33/github"
 	"github.com/stretchr/testify/require"
 )
@@ -15,8 +15,8 @@ func TestNewService(t *testing.T) {
 	s, ok := NewService(
 		// Totally unusable client that is enough to fulfill the dependencies for
 		// this test...
-		&coreTesting.MockEventsClient{
-			LogsClient: &coreTesting.MockLogsClient{},
+		&sdkTesting.MockEventsClient{
+			LogsClient: &sdkTesting.MockLogsClient{},
 		},
 		ServiceConfig{},
 	).(*service)
@@ -41,7 +41,7 @@ func TestHandle(t *testing.T) {
 		webhookType  string
 		webhookBytes func() []byte
 		service      *service
-		assertions   func(core.EventList, error)
+		assertions   func(sdk.EventList, error)
 	}{
 
 		{
@@ -51,14 +51,18 @@ func TestHandle(t *testing.T) {
 				return []byte("{}")
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
-					CreateFn: func(context.Context, core.Event) (core.EventList, error) {
+				eventsClient: &sdkTesting.MockEventsClient{
+					CreateFn: func(
+						context.Context,
+						sdk.Event,
+						*sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
 						require.Fail(t, "create event should not have been called")
-						return core.EventList{}, nil
+						return sdk.EventList{}, nil
 					},
 				},
 			},
-			assertions: func(_ core.EventList, err error) {
+			assertions: func(_ sdk.EventList, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error unmarshaling payload")
 			},
@@ -71,14 +75,18 @@ func TestHandle(t *testing.T) {
 				return []byte("")
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
-					CreateFn: func(context.Context, core.Event) (core.EventList, error) {
+				eventsClient: &sdkTesting.MockEventsClient{
+					CreateFn: func(
+						context.Context,
+						sdk.Event,
+						*sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
 						require.Fail(t, "create event should not have been called")
-						return core.EventList{}, nil
+						return sdk.EventList{}, nil
 					},
 				},
 			},
-			assertions: func(_ core.EventList, err error) {
+			assertions: func(_ sdk.EventList, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error unmarshaling payload")
 			},
@@ -93,14 +101,18 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
-					CreateFn: func(context.Context, core.Event) (core.EventList, error) {
+				eventsClient: &sdkTesting.MockEventsClient{
+					CreateFn: func(
+						context.Context,
+						sdk.Event,
+						*sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
 						require.Fail(t, "create event should not have been called")
-						return core.EventList{}, nil
+						return sdk.EventList{}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Empty(t, events.Items)
 			},
@@ -128,7 +140,7 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Empty(t, events.Items)
 			},
@@ -155,20 +167,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 2)
 				event := events.Items[0]
@@ -176,7 +189,7 @@ func TestHandle(t *testing.T) {
 				require.Equal(t, "check_run:rerequested", event.Type)
 				require.Equal(
 					t,
-					core.GitDetails{
+					sdk.GitDetails{
 						Commit: testSHA,
 						Ref:    testBranch,
 					},
@@ -196,7 +209,7 @@ func TestHandle(t *testing.T) {
 				)
 				require.Equal(
 					t,
-					core.GitDetails{
+					sdk.GitDetails{
 						Commit: testSHA,
 						Ref:    testBranch,
 					},
@@ -223,27 +236,28 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 2)
 				event := events.Items[0]
 				require.Equal(t, "check_suite:requested", event.Type)
 				require.Equal(
 					t,
-					core.GitDetails{
+					sdk.GitDetails{
 						Commit: testSHA,
 						Ref:    testBranch,
 					},
@@ -254,7 +268,7 @@ func TestHandle(t *testing.T) {
 				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
-					core.GitDetails{
+					sdk.GitDetails{
 						Commit: testSHA,
 						Ref:    testBranch,
 					},
@@ -277,20 +291,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -298,7 +313,7 @@ func TestHandle(t *testing.T) {
 				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
-					core.GitDetails{
+					sdk.GitDetails{
 						Ref: testBranch,
 					},
 					*event.Git,
@@ -319,20 +334,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -355,20 +371,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -389,14 +406,18 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
-					CreateFn: func(context.Context, core.Event) (core.EventList, error) {
+				eventsClient: &sdkTesting.MockEventsClient{
+					CreateFn: func(
+						context.Context,
+						sdk.Event,
+						*sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
 						require.Fail(t, "create event should not have been called")
-						return core.EventList{}, nil
+						return sdk.EventList{}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Empty(t, events.Items)
 			},
@@ -415,20 +436,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -459,20 +481,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 2)
 				event := events.Items[0]
@@ -513,20 +536,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 2)
 				event := events.Items[0]
@@ -567,20 +591,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 2)
 				event := events.Items[0]
@@ -617,20 +642,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -654,20 +680,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -691,20 +718,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -728,20 +756,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -765,20 +794,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -801,20 +831,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -835,17 +866,18 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
 						require.Fail(t, "create event should not have been called")
-						return core.EventList{}, nil
+						return sdk.EventList{}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Empty(t, events.Items, 0)
 			},
@@ -865,20 +897,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -902,20 +935,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -939,20 +973,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -975,20 +1010,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -1018,20 +1054,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -1039,7 +1076,7 @@ func TestHandle(t *testing.T) {
 				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
-					core.GitDetails{
+					sdk.GitDetails{
 						Commit: testSHA,
 						Ref:    "refs/pull/42/head",
 					},
@@ -1068,20 +1105,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -1089,7 +1127,7 @@ func TestHandle(t *testing.T) {
 				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
-					core.GitDetails{
+					sdk.GitDetails{
 						Commit: testSHA,
 						Ref:    "refs/pull/42/head",
 					},
@@ -1118,20 +1156,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -1139,7 +1178,7 @@ func TestHandle(t *testing.T) {
 				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
-					core.GitDetails{
+					sdk.GitDetails{
 						Commit: testSHA,
 						Ref:    "refs/pull/42/head",
 					},
@@ -1167,20 +1206,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -1188,7 +1228,7 @@ func TestHandle(t *testing.T) {
 				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
-					core.GitDetails{
+					sdk.GitDetails{
 						Commit: testSHA,
 						Ref:    testBranch,
 					},
@@ -1214,27 +1254,28 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 2)
 				event := events.Items[0]
 				require.Equal(t, "release:published", event.Type)
 				require.Equal(
 					t,
-					core.GitDetails{
+					sdk.GitDetails{
 						Ref: "v0.1.0",
 					},
 					*event.Git,
@@ -1243,7 +1284,7 @@ func TestHandle(t *testing.T) {
 				require.Equal(t, "cd:pipeline_requested", event.Type)
 				require.Equal(
 					t,
-					core.GitDetails{
+					sdk.GitDetails{
 						Ref: "v0.1.0",
 					},
 					*event.Git,
@@ -1265,20 +1306,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -1304,20 +1346,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -1325,7 +1368,7 @@ func TestHandle(t *testing.T) {
 				require.Equal(t, testQualifiers, event.Qualifiers)
 				require.Equal(
 					t,
-					core.GitDetails{
+					sdk.GitDetails{
 						Commit: testSHA,
 					},
 					*event.Git,
@@ -1346,20 +1389,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]
@@ -1383,20 +1427,21 @@ func TestHandle(t *testing.T) {
 				return bytes
 			},
 			service: &service{
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					CreateFn: func(
 						_ context.Context,
-						event core.Event,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+						event sdk.Event,
+						_ *sdk.EventCreateOptions,
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								event,
 							},
 						}, nil
 					},
 				},
 			},
-			assertions: func(events core.EventList, err error) {
+			assertions: func(events sdk.EventList, err error) {
 				require.NoError(t, err)
 				require.Len(t, events.Items, 1)
 				event := events.Items[0]

@@ -6,8 +6,7 @@ import (
 	"testing"
 	"time"
 
-	coreTesting "github.com/brigadecore/brigade/sdk/v2/testing/core"
-	systemTesting "github.com/brigadecore/brigade/sdk/v2/testing/system"
+	sdkTesting "github.com/brigadecore/brigade/sdk/v3/testing"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,9 +14,9 @@ func TestNewMonitor(t *testing.T) {
 	m := newMonitor(
 		// Totally unusable clients that are enough to fulfill the dependencies for
 		// this test...
-		&systemTesting.MockAPIClient{},
-		&coreTesting.MockEventsClient{
-			LogsClient: &coreTesting.MockLogsClient{},
+		&sdkTesting.MockSystemClient{},
+		&sdkTesting.MockEventsClient{
+			LogsClient: &sdkTesting.MockLogsClient{},
 		},
 		monitorConfig{},
 	)

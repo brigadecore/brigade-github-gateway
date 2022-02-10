@@ -7,8 +7,7 @@ import (
 	"time"
 
 	"github.com/brigadecore/brigade-github-gateway/internal/github"
-	"github.com/brigadecore/brigade/sdk/v2/core"
-	"github.com/brigadecore/brigade/sdk/v2/system"
+	"github.com/brigadecore/brigade/sdk/v3"
 )
 
 // monitorConfig encapsulates configuration options for the monitor component.
@@ -32,17 +31,17 @@ type monitor struct {
 	manageEventsFn         func(context.Context)
 	monitorEventFn         func(context.Context, string)
 	checkRunsClientFactory github.CheckRunsClientFactory
-	getJobLogsFn           func(context.Context, string, core.Job) (string, error)
+	getJobLogsFn           func(context.Context, string, sdk.Job) (string, error)
 	errFn                  func(...interface{})
-	systemClient           system.APIClient
-	eventsClient           core.EventsClient
-	logsClient             core.LogsClient
+	systemClient           sdk.SystemClient
+	eventsClient           sdk.EventsClient
+	logsClient             sdk.LogsClient
 }
 
 // newMonitor initializes and returns a monitor.
 func newMonitor(
-	systemClient system.APIClient,
-	eventsClient core.EventsClient,
+	systemClient sdk.SystemClient,
+	eventsClient sdk.EventsClient,
 	config monitorConfig,
 ) *monitor {
 	m := &monitor{

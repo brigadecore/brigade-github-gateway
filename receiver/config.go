@@ -10,7 +10,7 @@ import (
 	"github.com/brigadecore/brigade-foundations/os"
 	"github.com/brigadecore/brigade-github-gateway/internal/github"
 	"github.com/brigadecore/brigade-github-gateway/receiver/internal/webhooks"
-	"github.com/brigadecore/brigade/sdk/v2/restmachinery"
+	"github.com/brigadecore/brigade/sdk/v3/restmachinery"
 	"github.com/pkg/errors"
 )
 

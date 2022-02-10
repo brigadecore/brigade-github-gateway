@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	ghlib "github.com/brigadecore/brigade-github-gateway/internal/github"
-	"github.com/brigadecore/brigade/sdk/v2/core"
+	"github.com/brigadecore/brigade/sdk/v3"
 	"github.com/google/go-github/v33/github"
 	"github.com/pkg/errors"
 )
@@ -41,18 +41,18 @@ type Service interface {
 		appID int64,
 		webhookType string,
 		payload []byte,
-	) (core.EventList, error)
+	) (sdk.EventList, error)
 }
 
 type service struct {
-	eventsClient core.EventsClient
+	eventsClient sdk.EventsClient
 	config       ServiceConfig
 }
 
 // NewService returns an implementation of the Service interface for handling
 // webhooks from GitHub.
 func NewService(
-	eventsClient core.EventsClient,
+	eventsClient sdk.EventsClient,
 	config ServiceConfig,
 ) Service {
 	return &service{
@@ -67,9 +67,9 @@ func (s *service) Handle(
 	appID int64,
 	webhookType string,
 	payload []byte,
-) (core.EventList, error) {
-	var eventsToEmit []core.Event
-	var eventsEmitted core.EventList
+) (sdk.EventList, error) {
+	var eventsToEmit []sdk.Event
+	var eventsEmitted sdk.EventList
 
 	webhook, err := github.ParseWebHook(webhookType, payload)
 	if err != nil {
@@ -83,7 +83,7 @@ func (s *service) Handle(
 		log.Printf("error completing check suite forwarding: %s", err)
 	}
 
-	event := core.Event{
+	event := sdk.Event{
 		Source:  "brigade.sh/github",
 		Payload: string(payload),
 		Labels: map[string]string{
@@ -122,12 +122,12 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		event.Git = &core.GitDetails{
+		event.Git = &sdk.GitDetails{
 			Commit: webhook.GetCheckRun().GetCheckSuite().GetHeadSHA(),
 			Ref:    webhook.GetCheckRun().GetCheckSuite().GetHeadBranch(),
 		}
 		if webhook.GetAction() == "rerequested" {
-			event.SourceState = &core.SourceState{
+			event.SourceState = &sdk.SourceState{
 				State: map[string]string{
 					"tracking": "true",
 					"installationID": strconv.FormatInt(
@@ -140,7 +140,7 @@ func (s *service) Handle(
 				},
 			}
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#check_suite
@@ -153,12 +153,12 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		event.Git = &core.GitDetails{
+		event.Git = &sdk.GitDetails{
 			Commit: webhook.GetCheckSuite().GetHeadSHA(),
 			Ref:    webhook.GetCheckSuite().GetHeadBranch(),
 		}
 		if webhook.GetAction() == "requested" || webhook.GetAction() == "rerequested" { // nolint: lll
-			event.SourceState = &core.SourceState{
+			event.SourceState = &sdk.SourceState{
 				State: map[string]string{
 					"tracking": "true",
 					"installationID": strconv.FormatInt(
@@ -171,7 +171,7 @@ func (s *service) Handle(
 				},
 			}
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#create
@@ -183,10 +183,10 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		event.Git = &core.GitDetails{
+		event.Git = &sdk.GitDetails{
 			Ref: webhook.GetRef(),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#delete
@@ -198,7 +198,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// // From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#deployment
@@ -215,11 +215,11 @@ func (s *service) Handle(
 	// 	event.Qualifiers = map[string]string{
 	// 		"repo": w.GetRepo().GetFullName(),
 	// 	}
-	// 	event.Git = &core.GitDetails{
+	// 	event.Git = &sdk.GitDetails{
 	// 		Commit: w.GetDeployment().GetSHA(),
 	// 		Ref:    w.GetDeployment().GetRef(),
 	// 	}
-	//  eventsToEmit = []core.Event{event}
+	//  eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// // From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#deployment_status
@@ -236,11 +236,11 @@ func (s *service) Handle(
 	// 	event.Qualifiers = map[string]string{
 	// 		"repo": w.GetRepo().GetFullName(),
 	// 	}
-	// 	event.Git = &core.GitDetails{
+	// 	event.Git = &sdk.GitDetails{
 	// 		Commit: w.GetDeployment().GetSHA(),
 	// 		Ref:    w.GetDeployment().GetRef(),
 	// 	}
-	//  eventsToEmit = []core.Event{event}
+	//  eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#fork
@@ -251,7 +251,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#github_app_authorization
@@ -282,7 +282,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#installation
@@ -295,7 +295,7 @@ func (s *service) Handle(
 		// Special handling for this webhook-- an installation can affect
 		// multiple repos, so we'll iterate over all affected repos to emit an event
 		// for each into Brigade's event bus.
-		eventsToEmit = []core.Event{}
+		eventsToEmit = []sdk.Event{}
 		for _, repo := range webhook.Repositories {
 			event.Qualifiers = map[string]string{
 				"repo": repo.GetFullName(),
@@ -319,7 +319,7 @@ func (s *service) Handle(
 		if webhook.GetAction() == "removed" {
 			repos = webhook.RepositoriesRemoved
 		}
-		eventsToEmit = []core.Event{}
+		eventsToEmit = []sdk.Event{}
 		for _, repo := range repos {
 			event.Qualifiers = map[string]string{
 				"repo": repo.GetFullName(),
@@ -338,7 +338,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#issues
@@ -351,7 +351,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#label
@@ -364,7 +364,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#member
@@ -377,7 +377,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#milestone
@@ -390,7 +390,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#page_build
@@ -403,7 +403,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#ping
@@ -426,7 +426,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#project_column
@@ -439,7 +439,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#project
@@ -452,7 +452,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#public
@@ -464,7 +464,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#pull_request
@@ -479,11 +479,11 @@ func (s *service) Handle(
 		}
 		event.ShortTitle, event.LongTitle =
 			getTitlesFromPR(webhook.GetPullRequest())
-		event.Git = &core.GitDetails{
+		event.Git = &sdk.GitDetails{
 			Commit: webhook.GetPullRequest().GetHead().GetSHA(),
 			Ref:    fmt.Sprintf("refs/pull/%d/head", webhook.GetPullRequest().GetNumber()),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#pull_request_review
@@ -498,11 +498,11 @@ func (s *service) Handle(
 		}
 		event.ShortTitle, event.LongTitle =
 			getTitlesFromPR(webhook.GetPullRequest())
-		event.Git = &core.GitDetails{
+		event.Git = &sdk.GitDetails{
 			Commit: webhook.GetPullRequest().GetHead().GetSHA(),
 			Ref:    fmt.Sprintf("refs/pull/%d/head", webhook.GetPullRequest().GetNumber()),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#pull_request_review_comment
@@ -519,11 +519,11 @@ func (s *service) Handle(
 		}
 		event.ShortTitle, event.LongTitle =
 			getTitlesFromPR(webhook.GetPullRequest())
-		event.Git = &core.GitDetails{
+		event.Git = &sdk.GitDetails{
 			Commit: webhook.GetPullRequest().GetHead().GetSHA(),
 			Ref:    fmt.Sprintf("refs/pull/%d/head", webhook.GetPullRequest().GetNumber()),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#push
@@ -535,7 +535,7 @@ func (s *service) Handle(
 			"repo": webhook.GetRepo().GetFullName(),
 		}
 		event.ShortTitle, event.LongTitle = getTitlesFromPushWebhook(webhook)
-		event.Git = &core.GitDetails{
+		event.Git = &sdk.GitDetails{
 			Commit: webhook.GetHeadCommit().GetID(),
 			Ref:    webhook.GetRef(),
 		}
@@ -545,7 +545,7 @@ func (s *service) Handle(
 			event.Type = "push:delete"
 			event.Git = nil
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#release
@@ -558,10 +558,10 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		event.Git = &core.GitDetails{
+		event.Git = &sdk.GitDetails{
 			Ref: webhook.GetRelease().GetTagName(),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#repository
@@ -574,7 +574,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// // From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#star
@@ -590,7 +590,7 @@ func (s *service) Handle(
 	// 		// error is in the documentation, which is a possibility).
 	// 		"repo": w.GetRepo().GetFullName(),
 	// 	}
-	// eventsToEmit = []core.Event{event}
+	// eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#status
@@ -603,10 +603,10 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		event.Git = &core.GitDetails{
+		event.Git = &sdk.GitDetails{
 			Commit: webhook.GetCommit().GetSHA(),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// From https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#team_add
@@ -617,7 +617,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 
 	// nolint: lll
 	// https://docs.github.com/en/github-ae@latest/developers/webhooks-and-events/webhook-events-and-payloads#watch
@@ -636,7 +636,7 @@ func (s *service) Handle(
 		event.Qualifiers = map[string]string{
 			"repo": webhook.GetRepo().GetFullName(),
 		}
-		eventsToEmit = []core.Event{event}
+		eventsToEmit = []sdk.Event{event}
 	}
 
 	for _, event = range eventsToEmit {
@@ -646,8 +646,8 @@ func (s *service) Handle(
 	}
 
 	for _, event = range eventsToEmit {
-		var events core.EventList
-		if events, err = s.eventsClient.Create(ctx, event); err != nil {
+		var events sdk.EventList
+		if events, err = s.eventsClient.Create(ctx, event, nil); err != nil {
 			return eventsEmitted, errors.Wrap(
 				err,
 				"error emitting event(s) into Brigade",
