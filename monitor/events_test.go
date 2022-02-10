@@ -9,9 +9,9 @@ import (
 	"time"
 
 	ghlib "github.com/brigadecore/brigade-github-gateway/internal/github"
-	"github.com/brigadecore/brigade/sdk/v2/core"
-	"github.com/brigadecore/brigade/sdk/v2/meta"
-	coreTesting "github.com/brigadecore/brigade/sdk/v2/testing/core"
+	"github.com/brigadecore/brigade/sdk/v3"
+	"github.com/brigadecore/brigade/sdk/v3/meta"
+	sdkTesting "github.com/brigadecore/brigade/sdk/v3/testing"
 	"github.com/google/go-github/v33/github"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,13 +29,13 @@ func TestManageEvents(t *testing.T) {
 				config: monitorConfig{
 					listEventsInterval: time.Second,
 				},
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					ListFn: func(
 						context.Context,
-						*core.EventsSelector,
+						*sdk.EventsSelector,
 						*meta.ListOptions,
-					) (core.EventList, error) {
-						return core.EventList{}, errors.New("something went wrong")
+					) (sdk.EventList, error) {
+						return sdk.EventList{}, errors.New("something went wrong")
 					},
 				},
 			},
@@ -51,14 +51,14 @@ func TestManageEvents(t *testing.T) {
 				config: monitorConfig{
 					listEventsInterval: time.Second,
 				},
-				eventsClient: &coreTesting.MockEventsClient{
+				eventsClient: &sdkTesting.MockEventsClient{
 					ListFn: func(
 						context.Context,
-						*core.EventsSelector,
+						*sdk.EventsSelector,
 						*meta.ListOptions,
-					) (core.EventList, error) {
-						return core.EventList{
-							Items: []core.Event{
+					) (sdk.EventList, error) {
+						return sdk.EventList{
+							Items: []sdk.Event{
 								{
 									ObjectMeta: meta.ObjectMeta{
 										ID: "tunguska",
@@ -113,9 +113,13 @@ func TestMonitorEventInternal(t *testing.T) {
 			name: "error getting event",
 			monitor: &monitor{
 				config: testConfig,
-				eventsClient: &coreTesting.MockEventsClient{
-					GetFn: func(context.Context, string) (core.Event, error) {
-						return core.Event{}, errors.New("something went wrong")
+				eventsClient: &sdkTesting.MockEventsClient{
+					GetFn: func(
+						context.Context,
+						string,
+						*sdk.EventGetOptions,
+					) (sdk.Event, error) {
+						return sdk.Event{}, errors.New("something went wrong")
 					},
 				},
 			},
@@ -129,9 +133,13 @@ func TestMonitorEventInternal(t *testing.T) {
 			name: "app id missing from event labels",
 			monitor: &monitor{
 				config: testConfig,
-				eventsClient: &coreTesting.MockEventsClient{
-					GetFn: func(context.Context, string) (core.Event, error) {
-						return core.Event{}, nil
+				eventsClient: &sdkTesting.MockEventsClient{
+					GetFn: func(
+						context.Context,
+						string,
+						*sdk.EventGetOptions,
+					) (sdk.Event, error) {
+						return sdk.Event{}, nil
 					},
 				},
 			},
@@ -144,9 +152,13 @@ func TestMonitorEventInternal(t *testing.T) {
 			name: "app id not parseable as int",
 			monitor: &monitor{
 				config: testConfig,
-				eventsClient: &coreTesting.MockEventsClient{
-					GetFn: func(context.Context, string) (core.Event, error) {
-						return core.Event{
+				eventsClient: &sdkTesting.MockEventsClient{
+					GetFn: func(
+						context.Context,
+						string,
+						*sdk.EventGetOptions,
+					) (sdk.Event, error) {
+						return sdk.Event{
 							Labels: map[string]string{
 								"appID": "foobar",
 							},
@@ -163,9 +175,13 @@ func TestMonitorEventInternal(t *testing.T) {
 			name: "app configuration not found",
 			monitor: &monitor{
 				config: testConfig,
-				eventsClient: &coreTesting.MockEventsClient{
-					GetFn: func(context.Context, string) (core.Event, error) {
-						return core.Event{
+				eventsClient: &sdkTesting.MockEventsClient{
+					GetFn: func(
+						context.Context,
+						string,
+						*sdk.EventGetOptions,
+					) (sdk.Event, error) {
+						return sdk.Event{
 							Labels: map[string]string{
 								"appID": "99",
 							},
@@ -182,18 +198,22 @@ func TestMonitorEventInternal(t *testing.T) {
 			name: "error getting job logs",
 			monitor: &monitor{
 				config: testConfig,
-				eventsClient: &coreTesting.MockEventsClient{
-					GetFn: func(context.Context, string) (core.Event, error) {
-						return core.Event{
+				eventsClient: &sdkTesting.MockEventsClient{
+					GetFn: func(
+						context.Context,
+						string,
+						*sdk.EventGetOptions,
+					) (sdk.Event, error) {
+						return sdk.Event{
 							Labels: map[string]string{
 								"appID": "86",
 							},
-							Worker: &core.Worker{
-								Jobs: []core.Job{
+							Worker: &sdk.Worker{
+								Jobs: []sdk.Job{
 									{
 										Name: "italian",
-										Status: &core.JobStatus{
-											Phase: core.JobPhaseRunning,
+										Status: &sdk.JobStatus{
+											Phase: sdk.JobPhaseRunning,
 										},
 									},
 								},
@@ -201,7 +221,7 @@ func TestMonitorEventInternal(t *testing.T) {
 						}, nil
 					},
 				},
-				getJobLogsFn: func(context.Context, string, core.Job) (string, error) {
+				getJobLogsFn: func(context.Context, string, sdk.Job) (string, error) {
 					return "", errors.New("something went wrong")
 				},
 			},
@@ -216,23 +236,27 @@ func TestMonitorEventInternal(t *testing.T) {
 			name: "error parsing installation ID",
 			monitor: &monitor{
 				config: testConfig,
-				eventsClient: &coreTesting.MockEventsClient{
-					GetFn: func(context.Context, string) (core.Event, error) {
-						return core.Event{
+				eventsClient: &sdkTesting.MockEventsClient{
+					GetFn: func(
+						context.Context,
+						string,
+						*sdk.EventGetOptions,
+					) (sdk.Event, error) {
+						return sdk.Event{
 							Labels: map[string]string{
 								"appID": "86",
 							},
-							SourceState: &core.SourceState{
+							SourceState: &sdk.SourceState{
 								State: map[string]string{
 									"installationID": "foo", // Cannot be parsed as an int
 								},
 							},
-							Worker: &core.Worker{
-								Jobs: []core.Job{
+							Worker: &sdk.Worker{
+								Jobs: []sdk.Job{
 									{
 										Name: "italian",
-										Status: &core.JobStatus{
-											Phase: core.JobPhaseRunning,
+										Status: &sdk.JobStatus{
+											Phase: sdk.JobPhaseRunning,
 										},
 									},
 								},
@@ -240,7 +264,7 @@ func TestMonitorEventInternal(t *testing.T) {
 						}, nil
 					},
 				},
-				getJobLogsFn: func(context.Context, string, core.Job) (string, error) {
+				getJobLogsFn: func(context.Context, string, sdk.Job) (string, error) {
 					return "", nil
 				},
 			},
@@ -253,23 +277,26 @@ func TestMonitorEventInternal(t *testing.T) {
 			name: "error creating check run",
 			monitor: &monitor{
 				config: testConfig,
-				eventsClient: &coreTesting.MockEventsClient{
-					GetFn: func(context.Context, string) (core.Event, error) {
-						return core.Event{
+				eventsClient: &sdkTesting.MockEventsClient{
+					GetFn: func(
+						context.Context,
+						string, *sdk.EventGetOptions,
+					) (sdk.Event, error) {
+						return sdk.Event{
 							Labels: map[string]string{
 								"appID": "86",
 							},
-							SourceState: &core.SourceState{
+							SourceState: &sdk.SourceState{
 								State: map[string]string{
 									"installationID": strconv.Itoa(int(testCheckRunID)),
 								},
 							},
-							Worker: &core.Worker{
-								Jobs: []core.Job{
+							Worker: &sdk.Worker{
+								Jobs: []sdk.Job{
 									{
 										Name: "italian",
-										Status: &core.JobStatus{
-											Phase: core.JobPhaseRunning,
+										Status: &sdk.JobStatus{
+											Phase: sdk.JobPhaseRunning,
 										},
 									},
 								},
@@ -277,7 +304,7 @@ func TestMonitorEventInternal(t *testing.T) {
 						}, nil
 					},
 				},
-				getJobLogsFn: func(context.Context, string, core.Job) (string, error) {
+				getJobLogsFn: func(context.Context, string, sdk.Job) (string, error) {
 					return "", nil
 				},
 				checkRunsClientFactory: &ghlib.MockCheckRunsClientFactory{
@@ -310,23 +337,27 @@ func TestMonitorEventInternal(t *testing.T) {
 			name: "error updating check run",
 			monitor: &monitor{
 				config: testConfig,
-				eventsClient: &coreTesting.MockEventsClient{
-					GetFn: func(context.Context, string) (core.Event, error) {
-						return core.Event{
+				eventsClient: &sdkTesting.MockEventsClient{
+					GetFn: func(
+						context.Context,
+						string,
+						*sdk.EventGetOptions,
+					) (sdk.Event, error) {
+						return sdk.Event{
 							Labels: map[string]string{
 								"appID": "86",
 							},
-							SourceState: &core.SourceState{
+							SourceState: &sdk.SourceState{
 								State: map[string]string{
 									"installationID": "42",
 								},
 							},
-							Worker: &core.Worker{
-								Jobs: []core.Job{
+							Worker: &sdk.Worker{
+								Jobs: []sdk.Job{
 									{
 										Name: "italian",
-										Status: &core.JobStatus{
-											Phase: core.JobPhaseRunning,
+										Status: &sdk.JobStatus{
+											Phase: sdk.JobPhaseRunning,
 										},
 									},
 								},
@@ -334,7 +365,7 @@ func TestMonitorEventInternal(t *testing.T) {
 						}, nil
 					},
 				},
-				getJobLogsFn: func(context.Context, string, core.Job) (string, error) {
+				getJobLogsFn: func(context.Context, string, sdk.Job) (string, error) {
 					return "", nil
 				},
 				checkRunsClientFactory: &ghlib.MockCheckRunsClientFactory{
@@ -395,14 +426,14 @@ func TestCreateCheckRun(t *testing.T) {
 	const testOwner = "brigadecore"
 	const testRepo = "test"
 	const testHeadSHA = "123abcd"
-	testEvent := core.Event{
+	testEvent := sdk.Event{
 		ProjectID: "bluebook",
 	}
 	testStartTime := time.Now()
 	testEndTime := testStartTime.Add(time.Minute)
-	testJob := core.Job{
+	testJob := sdk.Job{
 		Name: "italian",
-		Status: &core.JobStatus{
+		Status: &sdk.JobStatus{
 			Started: &testStartTime,
 			Ended:   &testEndTime,
 		},
@@ -542,14 +573,14 @@ func TestUpdateCheckRun(t *testing.T) {
 	const testInstallationID = 99
 	const testOwner = "brigadecore"
 	const testRepo = "test"
-	testEvent := core.Event{
+	testEvent := sdk.Event{
 		ProjectID: "bluebook",
 	}
 	testStartTime := time.Now()
 	testEndTime := testStartTime.Add(time.Minute)
-	testJob := core.Job{
+	testJob := sdk.Job{
 		Name: "italian",
-		Status: &core.JobStatus{
+		Status: &sdk.JobStatus{
 			Started: &testStartTime,
 			Ended:   &testEndTime,
 		},
@@ -680,57 +711,57 @@ func TestUpdateCheckRun(t *testing.T) {
 
 func TestCheckRunStatusAndConclusionFromJobStatus(t *testing.T) {
 	testCases := []struct {
-		jobPhase           core.JobPhase
+		jobPhase           sdk.JobPhase
 		expectedStatus     string
 		expectedConclusion string
 	}{
 		{
-			jobPhase:           core.JobPhaseAborted,
+			jobPhase:           sdk.JobPhaseAborted,
 			expectedStatus:     statusCompleted,
 			expectedConclusion: conclusionCanceled,
 		},
 		{
-			jobPhase:           core.JobPhaseCanceled,
+			jobPhase:           sdk.JobPhaseCanceled,
 			expectedStatus:     statusCompleted,
 			expectedConclusion: conclusionCanceled,
 		},
 		{
-			jobPhase:           core.JobPhaseFailed,
+			jobPhase:           sdk.JobPhaseFailed,
 			expectedStatus:     statusCompleted,
 			expectedConclusion: conclusionFailure,
 		},
 		{
-			jobPhase:           core.JobPhaseSchedulingFailed,
+			jobPhase:           sdk.JobPhaseSchedulingFailed,
 			expectedStatus:     statusCompleted,
 			expectedConclusion: conclusionFailure,
 		},
 		{
-			jobPhase:           core.JobPhaseUnknown,
+			jobPhase:           sdk.JobPhaseUnknown,
 			expectedStatus:     statusCompleted,
 			expectedConclusion: conclusionFailure,
 		},
 		{
-			jobPhase:           core.JobPhasePending,
+			jobPhase:           sdk.JobPhasePending,
 			expectedStatus:     statusQueued,
 			expectedConclusion: "",
 		},
 		{
-			jobPhase:           core.JobPhaseStarting,
+			jobPhase:           sdk.JobPhaseStarting,
 			expectedStatus:     statusQueued,
 			expectedConclusion: "",
 		},
 		{
-			jobPhase:           core.JobPhaseRunning,
+			jobPhase:           sdk.JobPhaseRunning,
 			expectedStatus:     statusInProgress,
 			expectedConclusion: "",
 		},
 		{
-			jobPhase:           core.JobPhaseSucceeded,
+			jobPhase:           sdk.JobPhaseSucceeded,
 			expectedStatus:     statusCompleted,
 			expectedConclusion: conclusionSuccess,
 		},
 		{
-			jobPhase:           core.JobPhaseTimedOut,
+			jobPhase:           sdk.JobPhaseTimedOut,
 			expectedStatus:     statusCompleted,
 			expectedConclusion: conclusionTimedOut,
 		},
@@ -750,15 +781,15 @@ func TestGetJobLogs(t *testing.T) {
 	testCases := []struct {
 		name       string
 		monitor    *monitor
-		job        core.Job
+		job        sdk.Job
 		assertions func(logs string, err error)
 	}{
 		{
 			name:    "job is not terminal",
 			monitor: &monitor{},
-			job: core.Job{
-				Status: &core.JobStatus{
-					Phase: core.JobPhaseRunning,
+			job: sdk.Job{
+				Status: &sdk.JobStatus{
+					Phase: sdk.JobPhaseRunning,
 				},
 			},
 			assertions: func(logs string, err error) {
@@ -769,20 +800,20 @@ func TestGetJobLogs(t *testing.T) {
 		{
 			name: "error starting log stream",
 			monitor: &monitor{
-				logsClient: &coreTesting.MockLogsClient{
+				logsClient: &sdkTesting.MockLogsClient{
 					StreamFn: func(
 						context.Context,
 						string,
-						*core.LogsSelector,
-						*core.LogStreamOptions,
-					) (<-chan core.LogEntry, <-chan error, error) {
+						*sdk.LogsSelector,
+						*sdk.LogStreamOptions,
+					) (<-chan sdk.LogEntry, <-chan error, error) {
 						return nil, nil, errors.New("something went wrong")
 					},
 				},
 			},
-			job: core.Job{
-				Status: &core.JobStatus{
-					Phase: core.JobPhaseSucceeded,
+			job: sdk.Job{
+				Status: &sdk.JobStatus{
+					Phase: sdk.JobPhaseSucceeded,
 				},
 			},
 			assertions: func(logs string, err error) {
@@ -793,14 +824,14 @@ func TestGetJobLogs(t *testing.T) {
 		{
 			name: "error streaming logs",
 			monitor: &monitor{
-				logsClient: &coreTesting.MockLogsClient{
+				logsClient: &sdkTesting.MockLogsClient{
 					StreamFn: func(
 						context.Context,
 						string,
-						*core.LogsSelector,
-						*core.LogStreamOptions,
-					) (<-chan core.LogEntry, <-chan error, error) {
-						logEntryCh := make(chan core.LogEntry)
+						*sdk.LogsSelector,
+						*sdk.LogStreamOptions,
+					) (<-chan sdk.LogEntry, <-chan error, error) {
+						logEntryCh := make(chan sdk.LogEntry)
 						errCh := make(chan error)
 						go func() {
 							errCh <- errors.New("something went wrong")
@@ -809,9 +840,9 @@ func TestGetJobLogs(t *testing.T) {
 					},
 				},
 			},
-			job: core.Job{
-				Status: &core.JobStatus{
-					Phase: core.JobPhaseSucceeded,
+			job: sdk.Job{
+				Status: &sdk.JobStatus{
+					Phase: sdk.JobPhaseSucceeded,
 				},
 			},
 			assertions: func(logs string, err error) {
@@ -822,21 +853,21 @@ func TestGetJobLogs(t *testing.T) {
 		{
 			name: "success streaming logs, with truncation",
 			monitor: &monitor{
-				logsClient: &coreTesting.MockLogsClient{
+				logsClient: &sdkTesting.MockLogsClient{
 					StreamFn: func(
 						ctx context.Context,
 						_ string,
-						_ *core.LogsSelector,
-						_ *core.LogStreamOptions,
-					) (<-chan core.LogEntry, <-chan error, error) {
-						logEntryCh := make(chan core.LogEntry)
+						_ *sdk.LogsSelector,
+						_ *sdk.LogStreamOptions,
+					) (<-chan sdk.LogEntry, <-chan error, error) {
+						logEntryCh := make(chan sdk.LogEntry)
 						errCh := make(chan error)
 						go func() {
 							// Send 32768 one-char lines for 65536 bytes total
 							// (one-char msg + one-char newline)
 							for i := 0; i < 32768; i++ {
 								select {
-								case logEntryCh <- core.LogEntry{Message: "l"}:
+								case logEntryCh <- sdk.LogEntry{Message: "l"}:
 								case <-ctx.Done():
 									return
 								}
@@ -847,9 +878,9 @@ func TestGetJobLogs(t *testing.T) {
 					},
 				},
 			},
-			job: core.Job{
-				Status: &core.JobStatus{
-					Phase: core.JobPhaseSucceeded,
+			job: sdk.Job{
+				Status: &sdk.JobStatus{
+					Phase: sdk.JobPhaseSucceeded,
 				},
 			},
 			assertions: func(logs string, err error) {
@@ -861,19 +892,19 @@ func TestGetJobLogs(t *testing.T) {
 		{
 			name: "success streaming logs, no truncation",
 			monitor: &monitor{
-				logsClient: &coreTesting.MockLogsClient{
+				logsClient: &sdkTesting.MockLogsClient{
 					StreamFn: func(
 						ctx context.Context,
 						_ string,
-						_ *core.LogsSelector,
-						_ *core.LogStreamOptions,
-					) (<-chan core.LogEntry, <-chan error, error) {
-						logEntryCh := make(chan core.LogEntry)
+						_ *sdk.LogsSelector,
+						_ *sdk.LogStreamOptions,
+					) (<-chan sdk.LogEntry, <-chan error, error) {
+						logEntryCh := make(chan sdk.LogEntry)
 						errCh := make(chan error)
 						go func() {
 							for i := 0; i < 32767; i++ {
 								select {
-								case logEntryCh <- core.LogEntry{Message: "l"}:
+								case logEntryCh <- sdk.LogEntry{Message: "l"}:
 								case <-ctx.Done():
 									return
 								}
@@ -884,9 +915,9 @@ func TestGetJobLogs(t *testing.T) {
 					},
 				},
 			},
-			job: core.Job{
-				Status: &core.JobStatus{
-					Phase: core.JobPhaseSucceeded,
+			job: sdk.Job{
+				Status: &sdk.JobStatus{
+					Phase: sdk.JobPhaseSucceeded,
 				},
 			},
 			assertions: func(logs string, err error) {

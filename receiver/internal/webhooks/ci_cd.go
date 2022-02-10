@@ -3,11 +3,11 @@ package webhooks
 import (
 	"strings"
 
-	"github.com/brigadecore/brigade/sdk/v2/core"
+	"github.com/brigadecore/brigade/sdk/v3"
 	"github.com/google/go-github/v33/github"
 )
 
-func (s *service) getCICDEvent(event core.Event) *core.Event {
+func (s *service) getCICDEvent(event sdk.Event) *sdk.Event {
 	ciCDEvent := &event
 	switch event.Type {
 	// Where check_suite:requested and check_suite:rerequested are concerned, it's

@@ -17,7 +17,7 @@ func (m *monitor) runHealthcheckLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if _, err := m.systemClient.Ping(ctx); err != nil {
+			if _, err := m.systemClient.Ping(ctx, nil); err != nil {
 				m.errCh <- errors.Wrap(
 					err,
 					"error checking Brigade API server connectivity",

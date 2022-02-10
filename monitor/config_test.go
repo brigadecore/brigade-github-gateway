@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brigadecore/brigade/sdk/v2/restmachinery"
+	"github.com/brigadecore/brigade/sdk/v3/restmachinery"
 	"github.com/stretchr/testify/require"
 )
 

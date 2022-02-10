@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brigadecore/brigade/sdk/v2/system"
-	systemTesing "github.com/brigadecore/brigade/sdk/v2/testing/system"
+	"github.com/brigadecore/brigade/sdk/v3"
+	sdkTesting "github.com/brigadecore/brigade/sdk/v3/testing"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,9 +20,12 @@ func TestRunHealthcheckLoop(t *testing.T) {
 		{
 			name: "error pinging brigade API server",
 			monitor: &monitor{
-				systemClient: &systemTesing.MockAPIClient{
-					PingFn: func(context.Context) (system.PingResponse, error) {
-						return system.PingResponse{}, errors.New("something went wrong")
+				systemClient: &sdkTesting.MockSystemClient{
+					PingFn: func(
+						context.Context,
+						*sdk.PingOptions,
+					) (sdk.PingResponse, error) {
+						return sdk.PingResponse{}, errors.New("something went wrong")
 					},
 				},
 			},
@@ -38,9 +41,12 @@ func TestRunHealthcheckLoop(t *testing.T) {
 		{
 			name: "success",
 			monitor: &monitor{
-				systemClient: &systemTesing.MockAPIClient{
-					PingFn: func(context.Context) (system.PingResponse, error) {
-						return system.PingResponse{}, nil
+				systemClient: &sdkTesting.MockSystemClient{
+					PingFn: func(
+						context.Context,
+						*sdk.PingOptions,
+					) (sdk.PingResponse, error) {
+						return sdk.PingResponse{}, nil
 					},
 				},
 			},

@@ -8,7 +8,7 @@ import (
 	"github.com/brigadecore/brigade-foundations/file"
 	"github.com/brigadecore/brigade-foundations/os"
 	"github.com/brigadecore/brigade-github-gateway/internal/github"
-	clientRM "github.com/brigadecore/brigade/sdk/v2/restmachinery"
+	clientRM "github.com/brigadecore/brigade/sdk/v3/restmachinery"
 	"github.com/pkg/errors"
 )
 

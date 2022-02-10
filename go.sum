@@ -2,8 +2,8 @@ github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2 h1:7Ip0wMmLHLRJdrloD
 github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=
 github.com/brigadecore/brigade-foundations v0.2.0 h1:pUtIQgN5Qa1I5JjpJOu+9E7J/kXC/QY2fzdGZt/I50I=
 github.com/brigadecore/brigade-foundations v0.2.0/go.mod h1:edMgSJCUgfHN1RNGiiVOTRW4X4VykBLgssgWHPZK7Sg=
-github.com/brigadecore/brigade/sdk/v2 v2.2.0 h1:r9j7mCPUoBqiaOllKzdSl1GZp8Bx7SCJixgp3BFEMwg=
-github.com/brigadecore/brigade/sdk/v2 v2.2.0/go.mod h1:rB3y/pIheORX5AHbxaSAw5Xr/U6bUAUtSLkgJcbOHIY=
+github.com/brigadecore/brigade/sdk/v3 v3.0.0-rc.1 h1:Dwe8J5hxMeUsVctynZ0KSNshwjIO1U3laN1sDHYUYdc=
+github.com/brigadecore/brigade/sdk/v3 v3.0.0-rc.1/go.mod h1:Ow91x3wvUtkyMsV6hwbPtVZevrcHqoH0Pjh0OID4Sh0=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=

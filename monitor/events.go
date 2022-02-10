@@ -10,8 +10,8 @@ import (
 	"github.com/armon/circbuf"
 
 	ghlib "github.com/brigadecore/brigade-github-gateway/internal/github"
-	"github.com/brigadecore/brigade/sdk/v2/core"
-	"github.com/brigadecore/brigade/sdk/v2/meta"
+	"github.com/brigadecore/brigade/sdk/v3"
+	"github.com/brigadecore/brigade/sdk/v3/meta"
 	"github.com/google/go-github/v33/github"
 	"github.com/pkg/errors"
 )
@@ -45,18 +45,18 @@ func (m *monitor) manageEvents(ctx context.Context) {
 		for {
 			events, err := m.eventsClient.List(
 				ctx,
-				&core.EventsSelector{
+				&sdk.EventsSelector{
 					Source: "brigade.sh/github",
 					// These are all the phases where something worth reporting might have
 					// occurred. Basically, it just excludes pending and canceled phases.
-					WorkerPhases: []core.WorkerPhase{
-						core.WorkerPhaseAborted,
-						core.WorkerPhaseFailed,
-						core.WorkerPhaseRunning,
-						core.WorkerPhaseStarting,
-						core.WorkerPhaseSucceeded,
-						core.WorkerPhaseTimedOut,
-						core.WorkerPhaseUnknown,
+					WorkerPhases: []sdk.WorkerPhase{
+						sdk.WorkerPhaseAborted,
+						sdk.WorkerPhaseFailed,
+						sdk.WorkerPhaseRunning,
+						sdk.WorkerPhaseStarting,
+						sdk.WorkerPhaseSucceeded,
+						sdk.WorkerPhaseTimedOut,
+						sdk.WorkerPhaseUnknown,
 					},
 					SourceState: map[string]string{
 						// Only select events that are to be tracked / reported on.
@@ -134,7 +134,7 @@ func (m *monitor) monitorEventInternal(
 	ticker := time.NewTicker(m.config.eventFollowUpInterval)
 	defer ticker.Stop()
 	for {
-		event, err := m.eventsClient.Get(ctx, eventID)
+		event, err := m.eventsClient.Get(ctx, eventID, nil)
 		if err != nil {
 			return errors.Wrapf(
 				err,
@@ -256,7 +256,8 @@ func (m *monitor) monitorEventInternal(
 			if err := m.eventsClient.UpdateSourceState(
 				ctx,
 				eventID,
-				core.SourceState{},
+				sdk.SourceState{},
+				nil,
 			); err != nil {
 				return errors.Wrapf(
 					err,
@@ -285,8 +286,8 @@ func (m *monitor) createCheckRun(
 	owner string,
 	repo string,
 	headSHA string,
-	event core.Event,
-	job core.Job,
+	event sdk.Event,
+	job sdk.Job,
 	status string,
 	conclusion string,
 	logs string,
@@ -349,8 +350,8 @@ func (m *monitor) updateCheckRun(
 	owner string,
 	repo string,
 	checkRunID int64,
-	event core.Event,
-	job core.Job,
+	event sdk.Event,
+	job sdk.Job,
 	status string,
 	conclusion string,
 	logs string,
@@ -401,25 +402,25 @@ func (m *monitor) updateCheckRun(
 }
 
 func checkRunStatusAndConclusionFromJobStatus(
-	jobPhase core.JobPhase,
+	jobPhase sdk.JobPhase,
 ) (string, string) {
 	var status string
 	var conclusion string
 	switch jobPhase {
-	case core.JobPhaseAborted, core.JobPhaseCanceled:
+	case sdk.JobPhaseAborted, sdk.JobPhaseCanceled:
 		status = statusCompleted
 		conclusion = conclusionCanceled
-	case core.JobPhaseFailed, core.JobPhaseSchedulingFailed, core.JobPhaseUnknown: // nolint: lll
+	case sdk.JobPhaseFailed, sdk.JobPhaseSchedulingFailed, sdk.JobPhaseUnknown: // nolint: lll
 		status = statusCompleted
 		conclusion = conclusionFailure
-	case core.JobPhasePending, core.JobPhaseStarting:
+	case sdk.JobPhasePending, sdk.JobPhaseStarting:
 		status = statusQueued
-	case core.JobPhaseRunning:
+	case sdk.JobPhaseRunning:
 		status = statusInProgress
-	case core.JobPhaseSucceeded:
+	case sdk.JobPhaseSucceeded:
 		status = statusCompleted
 		conclusion = conclusionSuccess
-	case core.JobPhaseTimedOut:
+	case sdk.JobPhaseTimedOut:
 		status = statusCompleted
 		conclusion = conclusionTimedOut
 	}
@@ -429,7 +430,7 @@ func checkRunStatusAndConclusionFromJobStatus(
 func (m *monitor) getJobLogs(
 	ctx context.Context,
 	eventID string,
-	job core.Job,
+	job sdk.Job,
 ) (string, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel() // Cancel when we return so that we hang up on the log stream!
@@ -439,7 +440,7 @@ func (m *monitor) getJobLogs(
 	logCh, errCh, err := m.logsClient.Stream(
 		ctx,
 		eventID,
-		&core.LogsSelector{
+		&sdk.LogsSelector{
 			Job: job.Name,
 		},
 		nil,
@@ -457,7 +458,7 @@ func (m *monitor) getJobLogs(
 	jobLogsBuffer, _ := circbuf.NewBuffer(maxBytes)
 logLoop:
 	for {
-		var logEntry core.LogEntry
+		var logEntry sdk.LogEntry
 		var ok bool
 		select {
 		case logEntry, ok = <-logCh:

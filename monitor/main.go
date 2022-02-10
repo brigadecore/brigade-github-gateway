@@ -5,8 +5,7 @@ import (
 
 	"github.com/brigadecore/brigade-foundations/signals"
 	"github.com/brigadecore/brigade-foundations/version"
-	"github.com/brigadecore/brigade/sdk/v2/core"
-	"github.com/brigadecore/brigade/sdk/v2/system"
+	"github.com/brigadecore/brigade/sdk/v3"
 )
 
 func main() {
@@ -17,15 +16,15 @@ func main() {
 	)
 
 	// Brigade System and Events API clients
-	var systemClient system.APIClient
-	var eventsClient core.EventsClient
+	var systemClient sdk.SystemClient
+	var eventsClient sdk.EventsClient
 	{
 		address, token, opts, err := apiClientConfig()
 		if err != nil {
 			log.Fatal(err)
 		}
-		systemClient = system.NewAPIClient(address, token, &opts)
-		eventsClient = core.NewEventsClient(address, token, &opts)
+		systemClient = sdk.NewSystemClient(address, token, &opts)
+		eventsClient = sdk.NewEventsClient(address, token, &opts)
 	}
 
 	var monitor *monitor
