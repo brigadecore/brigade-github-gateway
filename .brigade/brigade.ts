@@ -154,9 +154,6 @@ const publishChartJob = (event: Event, version: string) => {
   })
 }
 
-// Run the entire suite of tests WITHOUT publishing anything initially. If
-// EVERYTHING passes AND this was a push (merge, presumably) to the main branch,
-// then run jobs to publish "edge" images.
 events.on("brigade.sh/github", "ci:pipeline_requested", async event => {
   await new SerialGroup(
     new ConcurrentGroup( // Basic tests
@@ -169,13 +166,6 @@ events.on("brigade.sh/github", "ci:pipeline_requested", async event => {
       buildMonitorJob(event)
     )
   ).run()
-  if (event.worker?.git?.ref == "main") {
-    // Push "edge" images
-    await new ConcurrentGroup(
-      pushReceiverJob(event),
-      pushMonitorJob(event)
-    ).run()
-  }
 })
 
 // This event indicates a specific job is to be re-run.
