@@ -118,7 +118,6 @@ build-images: build-receiver build-monitor
 
 .PHONY: build-%
 build-%:
-	docker login $(DOCKER_REGISTRY) -u $(DOCKER_USERNAME) -p $${DOCKER_PASSWORD}
 	docker buildx build \
 		-f $*/Dockerfile \
 		-t $(DOCKER_IMAGE_PREFIX)$*:$(IMMUTABLE_DOCKER_TAG) \
@@ -140,7 +139,6 @@ push-images: push-receiver push-monitor
 
 .PHONY: push-%
 push-%:
-	docker login $(DOCKER_REGISTRY) -u $(DOCKER_USERNAME) -p $${DOCKER_PASSWORD}
 	docker buildx build \
 		-f $*/Dockerfile \
 		-t $(DOCKER_IMAGE_PREFIX)$*:$(IMMUTABLE_DOCKER_TAG) \
