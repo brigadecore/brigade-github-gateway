@@ -2,7 +2,7 @@ import { events, Event, Job, ConcurrentGroup, SerialGroup, Container } from "@br
 
 const goImg = "brigadecore/go-tools:v0.8.0"
 const dindImg = "docker:20.10.9-dind"
-const dockerClientImg = "brigadecore/docker-tools:v0.2.0"
+const dockerClientImg = "brigadecore/docker-tools:v0.3.0"
 const helmImg = "brigadecore/helm-tools:v0.4.0"
 const localPath = "/workspaces/brigade-github-gateway"
 
@@ -143,9 +143,28 @@ class ScanJob extends MakeTargetJob {
   }
 }
 
+class PublishSBOMJob extends MakeTargetJob {
+  constructor(image: string, event: Event, version: string) {
+    const secrets = event.project.secrets
+    const env = {
+      "GITHUB_ORG": secrets.githubOrg,
+      "GITHUB_REPO": secrets.githubRepo,
+      "GITHUB_TOKEN": secrets.githubToken,
+      "VERSION": version
+    }
+    if (secrets.stableImageRegistry) {
+      env["DOCKER_REGISTRY"] = secrets.stableImageRegistry
+    }
+    if (secrets.stableImageRegistryOrg) {
+      env["DOCKER_ORG"] = secrets.stableImageRegistryOrg
+    }
+    super(`publish-sbom-${image}`, [`publish-sbom-${image}`], dockerClientImg, event, env)
+  }
+}
+
 // A map of all jobs. When a ci:job_requested event wants to re-run a single
 // job, this allows us to easily find that job by name.
-const jobs: {[key: string]: (event: Event) => Job } = {}
+const jobs: {[key: string]: (event: Event, version?: string) => Job } = {}
 
 // Basic tests:
 
@@ -206,6 +225,18 @@ const scanMonitorJob = (event: Event) => {
 }
 jobs[scanMonitorJobName] = scanMonitorJob
 
+const publishReceiverSBOMJobName = "publish-receiver-sbom"
+const publishReceiverSBOMJob = (event: Event, version: string) => {
+  return new PublishSBOMJob("receiver", event, version)
+}
+jobs[publishReceiverSBOMJobName] = publishReceiverSBOMJob
+
+const publishMonitorSBOMJobName = "publish-monitor-sbom"
+const publishMonitorSBOMJob = (event: Event, version: string) => {
+  return new PublishSBOMJob("monitor", event, version)
+}
+jobs[publishMonitorSBOMJobName] = publishMonitorSBOMJob
+
 events.on("brigade.sh/github", "ci:pipeline_requested", async event => {
   await new SerialGroup(
     new ConcurrentGroup( // Basic tests
@@ -241,7 +272,11 @@ events.on("brigade.sh/github", "cd:pipeline_requested", async event => {
     // have succeeded. We don't want any possibility of publishing a chart
     // that references images that failed to push (or simply haven't
     // finished pushing).
-    publishChartJob(event, version)
+    publishChartJob(event, version),
+    new ConcurrentGroup(
+      publishReceiverSBOMJob(event, version),
+      publishMonitorSBOMJob(event, version)
+    )
   ).run()
 })
 
