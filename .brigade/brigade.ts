@@ -144,7 +144,7 @@ class ScanJob extends MakeTargetJob {
 }
 
 class PublishSBOMJob extends MakeTargetJob {
-  constructor(image: string, event: Event, version: string) {
+  constructor(name: string, image: string, event: Event, version: string) {
     const secrets = event.project.secrets
     const env = {
       "GITHUB_ORG": secrets.githubOrg,
@@ -158,7 +158,7 @@ class PublishSBOMJob extends MakeTargetJob {
     if (secrets.stableImageRegistryOrg) {
       env["DOCKER_ORG"] = secrets.stableImageRegistryOrg
     }
-    super(`publish-sbom-${image}`, [`publish-sbom-${image}`], dockerClientImg, event, env)
+    super(name, [`publish-sbom-${image}`], dockerClientImg, event, env)
   }
 }
 
@@ -225,15 +225,15 @@ const scanMonitorJob = (event: Event) => {
 }
 jobs[scanMonitorJobName] = scanMonitorJob
 
-const publishReceiverSBOMJobName = "publish-receiver-sbom"
+const publishReceiverSBOMJobName = "publish-sbom-receiver"
 const publishReceiverSBOMJob = (event: Event, version: string) => {
-  return new PublishSBOMJob("receiver", event, version)
+  return new PublishSBOMJob(publishReceiverSBOMJobName, "receiver", event, version)
 }
 jobs[publishReceiverSBOMJobName] = publishReceiverSBOMJob
 
-const publishMonitorSBOMJobName = "publish-monitor-sbom"
+const publishMonitorSBOMJobName = "publish-sbom-monitor"
 const publishMonitorSBOMJob = (event: Event, version: string) => {
-  return new PublishSBOMJob("monitor", event, version)
+  return new PublishSBOMJob(publishMonitorSBOMJobName, "monitor", event, version)
 }
 jobs[publishMonitorSBOMJobName] = publishMonitorSBOMJob
 
