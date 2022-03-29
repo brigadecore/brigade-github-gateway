@@ -142,7 +142,7 @@ generate-sbom-%:
 		--file ./artifacts/brigade-github-gateway-$*-$(VERSION)-SBOM.json
 
 .PHONY: publish-sbom-%
-publish-sbom-%: generate-sbom-$*
+publish-sbom-%: generate-sbom-%
 	ghr \
 		-u $(GITHUB_ORG) \
 		-r $(GITHUB_REPO) \
