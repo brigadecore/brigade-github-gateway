@@ -7,10 +7,11 @@ ARG TARGETARCH
 ENV CGO_ENABLED=0
 
 WORKDIR /src
-COPY receiver/ receiver/
-COPY internal/ internal/
 COPY go.mod go.mod
 COPY go.sum go.sum
+RUN go mod download
+COPY receiver/ receiver/
+COPY internal/ internal/
 
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build \
   -o bin/receiver \
