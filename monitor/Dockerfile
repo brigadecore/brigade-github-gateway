@@ -7,10 +7,11 @@ ARG TARGETARCH
 ENV CGO_ENABLED=0
 
 WORKDIR /src
-COPY monitor/ monitor/
-COPY internal/ internal/
 COPY go.mod go.mod
 COPY go.sum go.sum
+RUN go mod download
+COPY monitor/ monitor/
+COPY internal/ internal/
 
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build \
   -o bin/monitor \
