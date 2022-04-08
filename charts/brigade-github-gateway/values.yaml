@@ -75,14 +75,6 @@ receiver:
       - MEMBER
       - COLLABORATOR
 
-  brigade:
-    ## The opt-in list of upstream event types that may be emitted into Brigade.
-    ## Defaults to "*" which matches any event type. To emit only specific
-    ## events into Brigade, remove "*" and enumerate specific event types
-    ## instead (`pull_request:opened`, for instance).
-    emittedEvents:
-    - "*"
-
   tls:
     ## Whether to enable TLS. If true then you MUST do ONE of three things to
     ## ensure the existence of a TLS certificate:
