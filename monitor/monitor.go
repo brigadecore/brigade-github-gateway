@@ -12,10 +12,11 @@ import (
 
 // monitorConfig encapsulates configuration options for the monitor component.
 type monitorConfig struct {
-	healthcheckInterval   time.Duration
-	listEventsInterval    time.Duration
-	eventFollowUpInterval time.Duration
-	gitHubApps            map[int64]github.App
+	healthcheckInterval                time.Duration
+	listEventsInterval                 time.Duration
+	eventFollowUpInterval              time.Duration
+	gitHubApps                         map[int64]github.App
+	reportFallibleJobFailuresAsNeutral bool
 }
 
 // monitor is a component that continuously monitors certain events that the

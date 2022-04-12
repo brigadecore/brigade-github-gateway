@@ -711,65 +711,102 @@ func TestUpdateCheckRun(t *testing.T) {
 
 func TestCheckRunStatusAndConclusionFromJobStatus(t *testing.T) {
 	testCases := []struct {
+		name               string
 		jobPhase           sdk.JobPhase
+		jobIsFallible      bool
+		config             monitorConfig
 		expectedStatus     string
 		expectedConclusion string
 	}{
 		{
+			name:               "job was aborted",
 			jobPhase:           sdk.JobPhaseAborted,
 			expectedStatus:     statusCompleted,
 			expectedConclusion: conclusionCanceled,
 		},
 		{
+			name:               "job was canceled",
 			jobPhase:           sdk.JobPhaseCanceled,
 			expectedStatus:     statusCompleted,
 			expectedConclusion: conclusionCanceled,
 		},
 		{
+			name:               "job failed",
 			jobPhase:           sdk.JobPhaseFailed,
 			expectedStatus:     statusCompleted,
 			expectedConclusion: conclusionFailure,
 		},
 		{
+			name: "job failed; job is fallible; fallible not " +
+				"reported as neutral",
+			jobPhase:           sdk.JobPhaseFailed,
+			jobIsFallible:      true,
+			expectedStatus:     statusCompleted,
+			expectedConclusion: conclusionFailure,
+		},
+		{
+			name: "job failed; job is fallible; fallible reported " +
+				"as neutral",
+			jobPhase:      sdk.JobPhaseFailed,
+			jobIsFallible: true,
+			config: monitorConfig{
+				reportFallibleJobFailuresAsNeutral: true,
+			},
+			expectedStatus:     statusCompleted,
+			expectedConclusion: conclusionNeutral,
+		},
+		{
+			name:               "job scheduling failed",
 			jobPhase:           sdk.JobPhaseSchedulingFailed,
 			expectedStatus:     statusCompleted,
 			expectedConclusion: conclusionFailure,
 		},
 		{
+			name:               "job phase is unknown",
 			jobPhase:           sdk.JobPhaseUnknown,
 			expectedStatus:     statusCompleted,
 			expectedConclusion: conclusionFailure,
 		},
 		{
+			name:               "job is pending",
 			jobPhase:           sdk.JobPhasePending,
 			expectedStatus:     statusQueued,
 			expectedConclusion: "",
 		},
 		{
+			name:               "job is starting",
 			jobPhase:           sdk.JobPhaseStarting,
 			expectedStatus:     statusQueued,
 			expectedConclusion: "",
 		},
 		{
+			name:               "job is running",
 			jobPhase:           sdk.JobPhaseRunning,
 			expectedStatus:     statusInProgress,
 			expectedConclusion: "",
 		},
 		{
+			name:               "job has succeeded",
 			jobPhase:           sdk.JobPhaseSucceeded,
 			expectedStatus:     statusCompleted,
 			expectedConclusion: conclusionSuccess,
 		},
 		{
+			name:               "job has timed out",
 			jobPhase:           sdk.JobPhaseTimedOut,
 			expectedStatus:     statusCompleted,
 			expectedConclusion: conclusionTimedOut,
 		},
 	}
 	for _, testCase := range testCases {
-		t.Run(string(testCase.jobPhase), func(t *testing.T) {
-			status, conclusion :=
-				checkRunStatusAndConclusionFromJobStatus(testCase.jobPhase)
+		t.Run(testCase.name, func(t *testing.T) {
+			m := &monitor{
+				config: testCase.config,
+			}
+			status, conclusion := m.checkRunStatusAndConclusionFromJobStatus(
+				testCase.jobPhase,
+				testCase.jobIsFallible,
+			)
 			require.Equal(t, testCase.expectedStatus, status)
 			require.Equal(t, testCase.expectedConclusion, conclusion)
 		})

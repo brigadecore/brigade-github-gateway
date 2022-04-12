@@ -65,5 +65,10 @@ func getMonitorConfig() (monitorConfig, error) {
 	}
 	config.eventFollowUpInterval, err =
 		os.GetDurationFromEnvVar("EVENT_FOLLOW_UP_INTERVAL", 30*time.Second)
+	if err != nil {
+		return config, err
+	}
+	config.reportFallibleJobFailuresAsNeutral, err =
+		os.GetBoolFromEnvVar("REPORT_FALLIBLE_JOB_FAILURES_AS_NEUTRAL", false)
 	return config, err
 }
