@@ -194,6 +194,15 @@ monitor:
   ## time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
   eventFollowUpInterval: 30s
 
+  github:
+    checkSuite:
+      ## Determines how a failed job that is ALLOWED to fail will be reported
+      ## upstream to GitHub. When set to false, failed jobs, even if allowed to
+      ## fail, will be reported as failures. When set to true, failed jobs will
+      ## be reported with a neutral status. This is defaulted to false for
+      ## backwards compatibility, but it is recommended to set this to true.
+      reportFallibleJobFailuresAsNeutral: false
+
   resources: {}
     # We usually recommend not to specify default resources and to leave this as
     # a conscious choice for the user. This also increases chances charts run on

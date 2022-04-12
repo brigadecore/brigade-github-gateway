@@ -41,6 +41,8 @@ spec:
           value: {{ .Values.monitor.listEventsInterval }}
         - name: EVENT_FOLLOW_UP_INTERVAL
           value: {{ .Values.monitor.eventFollowUpInterval }}
+        - name: REPORT_FALLIBLE_JOB_FAILURES_AS_NEUTRAL
+          value: {{ quote .Values.monitor.github.checkSuite.reportFallibleJobFailuresAsNeutral }}
         volumeMounts:
         - name: config
           mountPath: /app/config
