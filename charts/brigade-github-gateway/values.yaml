@@ -201,6 +201,9 @@ monitor:
       ## fail, will be reported as failures. When set to true, failed jobs will
       ## be reported with a neutral status. This is defaulted to false for
       ## backwards compatibility, but it is recommended to set this to true.
+      ##
+      ## Note that Brigade v2.4.0+ is required for this feature to work
+      ## correctly.
       reportFallibleJobFailuresAsNeutral: false
 
   resources: {}
