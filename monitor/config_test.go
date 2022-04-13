@@ -167,6 +167,31 @@ func TestGetMonitorConfig(t *testing.T) {
 				require.Contains(t, err.Error(), "was not parsable as a duration")
 			},
 		},
+
+		{
+			name: "errors parsing REPORT_FALLIBLE_JOB_FAILURES_AS_NEUTRAL",
+			setup: func() {
+				appsFile, err := ioutil.TempFile("", "apps.json")
+				require.NoError(t, err)
+				defer appsFile.Close()
+				_, err =
+					appsFile.Write([]byte(`[{"appID":42,"apiKey":"foobar"}]`))
+				require.NoError(t, err)
+				t.Setenv("GITHUB_APPS_PATH", appsFile.Name())
+				t.Setenv("LIST_EVENTS_INTERVAL", "1m")
+				t.Setenv("EVENT_FOLLOW_UP_INTERVAL", "1m")
+				t.Setenv("REPORT_FALLIBLE_JOB_FAILURES_AS_NEUTRAL", "bogus")
+			},
+			assertions: func(cfg monitorConfig, err error) {
+				require.Error(t, err)
+				require.Contains(
+					t,
+					err.Error(),
+					"REPORT_FALLIBLE_JOB_FAILURES_AS_NEUTRAL",
+				)
+				require.Contains(t, err.Error(), "was not parsable as a bool")
+			},
+		},
 		{
 			name: "success",
 			setup: func() {
@@ -178,6 +203,7 @@ func TestGetMonitorConfig(t *testing.T) {
 				require.NoError(t, err)
 				t.Setenv("GITHUB_APPS_PATH", appsFile.Name())
 				t.Setenv("EVENT_FOLLOW_UP_INTERVAL", "1m")
+				t.Setenv("REPORT_FALLIBLE_JOB_FAILURES_AS_NEUTRAL", "true")
 			},
 			assertions: func(cfg monitorConfig, err error) {
 				require.NoError(t, err)
@@ -186,6 +212,7 @@ func TestGetMonitorConfig(t *testing.T) {
 				require.Equal(t, "foobar", cfg.gitHubApps[42].APIKey)
 				require.Equal(t, time.Minute, cfg.listEventsInterval)
 				require.Equal(t, time.Minute, cfg.eventFollowUpInterval)
+				require.True(t, cfg.reportFallibleJobFailuresAsNeutral)
 			},
 		},
 	}

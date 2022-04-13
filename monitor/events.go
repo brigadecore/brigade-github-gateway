@@ -24,6 +24,7 @@ const (
 	// nolint: misspell
 	conclusionCanceled = "cancelled" // This is how GitHub spells it
 	conclusionFailure  = "failure"
+	conclusionNeutral  = "neutral"
 	conclusionSuccess  = "success"
 	conclusionTimedOut = "timed_out"
 )
@@ -177,8 +178,10 @@ func (m *monitor) monitorEventInternal(
 				continue // next job
 			}
 
-			status, conclusion :=
-				checkRunStatusAndConclusionFromJobStatus(job.Status.Phase)
+			status, conclusion := m.checkRunStatusAndConclusionFromJobStatus(
+				job.Status.Phase,
+				job.Spec.Fallible,
+			)
 
 			// Note: This will return an empty string if the job isn't in a terminal
 			// phase
@@ -401,8 +404,9 @@ func (m *monitor) updateCheckRun(
 	)
 }
 
-func checkRunStatusAndConclusionFromJobStatus(
+func (m *monitor) checkRunStatusAndConclusionFromJobStatus(
 	jobPhase sdk.JobPhase,
+	fallible bool,
 ) (string, string) {
 	var status string
 	var conclusion string
@@ -412,7 +416,11 @@ func checkRunStatusAndConclusionFromJobStatus(
 		conclusion = conclusionCanceled
 	case sdk.JobPhaseFailed, sdk.JobPhaseSchedulingFailed, sdk.JobPhaseUnknown: // nolint: lll
 		status = statusCompleted
-		conclusion = conclusionFailure
+		if fallible && m.config.reportFallibleJobFailuresAsNeutral {
+			conclusion = conclusionNeutral
+		} else {
+			conclusion = conclusionFailure
+		}
 	case sdk.JobPhasePending, sdk.JobPhaseStarting:
 		status = statusQueued
 	case sdk.JobPhaseRunning:
