@@ -35,18 +35,10 @@ subject to a few very simple rules:
 1. For any webhook that is indicative of activity involving not only a specific
    repository, but also some specific ref (branch or tag) or commit (identified
    by SHA), this gateway copies those details from the webhook's JSON payload
-   and:
-   
-    1. Promotes them to the corresponding event's `git.ref` and/or `git.commit`
-       fields. By doing so, Brigade is enabled to locate specific code
-       referenced by the webhook/event. The importance of this cannot be
-       understated, as it is what permits Brigade to be used for implementing
-       CI/CD pipelines.
-
-    2. Promotes the ref to the `ref` label on the corresponding event. This
-       permits projects to, for instance, subscribe only to events relating
-       to a specific branch. Read more about labels
-       [here](https://docs.brigade.sh/topics/project-developers/events/#labels).
+   and promotes them to the corresponding event's `git.ref` and/or `git.commit`
+   fields. By doing so, Brigade is enabled to locate specific code referenced by
+   the webhook/event. The importance of this cannot be understated, as it is
+   what permits Brigade to be used for implementing CI/CD pipelines.
 
 1. If this gateway is able to infer that a webhook pertains only to a _specific_
    Brigade project, this information will be included in the corresponding
