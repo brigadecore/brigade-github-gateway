@@ -105,7 +105,7 @@ of this:
 
 1. Revisit your GitHub App configuration at
    `https://github.com/settings/apps/<app name>` and replace the placeholder
-   value in the __Webhook URL__ field with the ngrok URL from the previous step.
+   value in the __Webhook URL__ field with `<ngrok URL>/events`.
 
 > ⚠️&nbsp;&nbsp;We cannot guarantee that ngrok will work in all environments,
 > especially if you are behind a corporate firewall.
