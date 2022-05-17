@@ -61,7 +61,7 @@ spec:
 Assuming this file were named `project.yaml`, you can create the project like
 so:
 
-```console
+```shell
 $ brig project create --file project.yaml
 ```
 
@@ -73,7 +73,7 @@ script that was embedded in the project definition.
 
 List the events for the `github-demo` project to confirm this:
 
-```console
+```shell
 $ brig event list --project github-demo
 ```
 

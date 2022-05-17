@@ -111,7 +111,7 @@ will be the third-party.
 
 1. Using the `brig` CLI, create a service account for the gateway to use:
 
-   ```console
+   ```shell
    $ brig service-account create \
        --id brigade-github-gateway \
        --description brigade-github-gateway
@@ -124,7 +124,7 @@ will be the third-party.
 
 1. Authorize this service account to read all events and to create new ones:
 
-   ```console
+   ```shell
    $ brig role grant READER \
        --service-account brigade-github-gateway
 
@@ -141,20 +141,20 @@ will be the third-party.
 
 ## Install the Gateway
 
-> ⚠️&nbsp;&nbsp;be sure you are using
+> ⚠️&nbsp;&nbsp;Be sure you are using
 > [Helm 3.7.0](https://github.com/helm/helm/releases/tag/v3.7.0) or greater and
 > enable experimental OCI support:
 >
-> ```console
->  $ export HELM_EXPERIMENTAL_OCI=1
->  ```
+> ```shell
+> $ export HELM_EXPERIMENTAL_OCI=1
+> ```
 
 1. As this gateway requires some specific configuration to function properly,
    we'll first create a values file containing those settings. Use the following
    command to extract the full set of configuration options into a file you can
    modify:
 
-   ```console
+   ```shell
    $ helm inspect values oci://ghcr.io/brigadecore/brigade-github-gateway \
        --version v1.2.0 > ~/brigade-github-gateway-values.yaml
    ```
@@ -204,7 +204,7 @@ will be the third-party.
 
 1. Use the following command to install the gateway:
 
-   ```console
+   ```shell
    $ helm install brigade-github-gateway \
        oci://ghcr.io/brigadecore/brigade-github-gateway \
        --version v1.2.0 \
@@ -227,7 +227,7 @@ In either case, we need to obtain that address now.
 If you overrode default configuration and set `service.type` to `LoadBalancer`,
 use this command to find the gateway's public IP address:
 
-```console
+```shell
 $ kubectl get svc brigade-github-gateway-receiver \
     --namespace brigade-github-gateway \
     --output jsonpath='{.status.loadBalancer.ingress[0].ip}'
