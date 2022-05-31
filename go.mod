@@ -8,7 +8,7 @@ require (
 	github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2
 	github.com/brigadecore/brigade-foundations v0.2.0
 	github.com/brigadecore/brigade/sdk/v3 v3.1.0
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/go-github/v33 v33.0.0
 	github.com/gorilla/mux v1.8.0
 	github.com/kr/text v0.2.0 // indirect
