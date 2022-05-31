@@ -29,5 +29,5 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.6.7 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	golang.org/x/net v0.0.0-20190603091049-60506f45cf65 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
